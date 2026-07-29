@@ -1,0 +1,248 @@
+# EvalForge Roadmap
+
+## Locked Order And Status
+
+The EvalForge roadmap contains exactly Milestones 0 through 15 in the order below. Milestone order may change only through an explicit owner-approved formal roadmap amendment.
+
+| Milestone | Title | Status |
+| --- | --- | --- |
+| 0 | Repository and Local Workspace Setup | Approved |
+| 1 | Product Charter, Architecture, Governance, and Threat Model | Implemented pending owner review |
+| 2 | Engineering and Infrastructure Foundation | Not started |
+| 3 | Authentication, Authorization, and Tenant Isolation | Not started |
+| 4 | Versioned Evaluation Domain and Persistence | Not started |
+| 5 | SDK, API, Trace, and Run Ingestion | Not started |
+| 6 | Dataset and Test-Case Management | Not started |
+| 7 | Experiment Execution and Reproducibility Engine | Not started |
+| 8 | Deterministic Evaluation Framework | Not started |
+| 9 | Model-Based and Human Evaluation | Not started |
+| 10 | RAG, Grounding, and Citation Evaluation | Not started |
+| 11 | Tool-Use, Agent-Trajectory, and Safety Evaluation | Not started |
+| 12 | Metrics, Comparison, Regression, and Quality-Gate Engine | Not started |
+| 13 | Dashboard, Trace Inspection, and Failure Analysis | Not started |
+| 14 | CI/CD, Integrations, and Deployment Gates | Not started |
+| 15 | Production Hardening, Demonstration, Documentation, and Final Acceptance | Not started |
+
+## Milestone 0 — Repository and Local Workspace Setup
+
+Status: Approved.
+
+Objective: Establish the public EvalForge repository and local workspace skeleton.
+
+Major deliverables: Repository identity, branch and remote setup, README seed, directory skeleton, and placeholder files.
+
+Explicit exclusions: Product implementation, dependencies, runtime configuration, application code, infrastructure, CI/CD, and detailed contracts.
+
+Measurable acceptance criteria: Repository exists at the canonical remote, local workspace resolves to the canonical path, `main` is active, working tree is clean, and the approved commit is recorded.
+
+Dependencies on prior milestones: None.
+
+## Milestone 1 — Product Charter, Architecture, Governance, and Threat Model
+
+Status: Implemented pending owner review.
+
+Objective: Establish authoritative product, architecture, evaluation, security, governance, tenancy, reproducibility, and modularity contracts for later milestones.
+
+Major deliverables: README update, product charter, Phase 1 scope, requirements, roadmap, architecture, domain model, evaluation taxonomy, metric definitions, reproducibility contract, tenancy and authorization contract, data governance, human review policy, security baseline, trust boundaries, threat model, modularity standard, milestone acceptance policy, and ADRs 0001 through 0006.
+
+Explicit exclusions: All application code, runtime dependencies, package-manager configuration, databases, migrations, Docker services, CI/CD workflows, APIs, workers, SDKs, evaluators, dashboards, authentication implementation, tenant-isolation implementation, infrastructure implementation, and Milestone 2 or later functionality.
+
+Measurable acceptance criteria: Required documents exist, `docs/.gitkeep` is removed, links resolve, roadmap status is correct, required metrics and threats are documented, modularity rules contain the approved 300-line threshold, validation passes, staged diff is limited to Milestone 1 documentation, and the owner reviews the milestone.
+
+Dependencies on prior milestones: Milestone 0 approved.
+
+## Milestone 2 — Engineering and Infrastructure Foundation
+
+Status: Not started.
+
+Objective: Establish the engineering foundation authorized after Milestone 1 approval.
+
+Major deliverables: Initial workspace configuration, development tooling, validation commands, dependency policy enforcement, architectural test scaffolding, and local foundation for later services.
+
+Explicit exclusions: Authentication, tenant isolation, domain persistence, production APIs, workers, SDKs, dashboards, evaluator engines, trace ingestion, deployment gates, and product features belonging to Milestones 3–15.
+
+Measurable acceptance criteria: Foundation tooling is repeatable locally, validation reports every modularity violation, no functional platform behavior is introduced beyond foundation scope, and documentation reflects the implemented foundation.
+
+Dependencies on prior milestones: Milestones 0 and 1 approved.
+
+## Milestone 3 — Authentication, Authorization, and Tenant Isolation
+
+Status: Not started.
+
+Objective: Implement the initial security model for users, service identities, roles, permissions, and tenant-scoped enforcement.
+
+Major deliverables: Authentication integration, authorization policy enforcement, tenant membership model, service identity controls, and audit evidence for protected operations.
+
+Explicit exclusions: Full evaluation domain, experiment execution, dashboards beyond security workflows, CI/CD deployment gates, and later evaluator functionality.
+
+Measurable acceptance criteria: Server-side authorization is enforced for protected resources, cross-tenant access is rejected, audit events are emitted, and UI filtering is not treated as authorization.
+
+Dependencies on prior milestones: Milestones 0–2 approved.
+
+## Milestone 4 — Versioned Evaluation Domain and Persistence
+
+Status: Not started.
+
+Objective: Implement persistent versioned domain concepts for evaluation artifacts and immutable snapshots.
+
+Major deliverables: Domain entities, persistence mappings, dataset snapshots, artifact versioning, lineage, hashing, retention metadata, and audit hooks.
+
+Explicit exclusions: SDKs, trace ingestion, experiment execution engine, evaluator implementations, dashboards, integrations, and deployment gates.
+
+Measurable acceptance criteria: Versioned artifacts and immutable snapshots obey the domain model, tenant isolation applies to persistence, and completed immutable records cannot be modified through supported paths.
+
+Dependencies on prior milestones: Milestones 0–3 approved.
+
+## Milestone 5 — SDK, API, Trace, and Run Ingestion
+
+Status: Not started.
+
+Objective: Implement controlled ingestion paths for runs, traces, spans, and artifacts through APIs and SDK contracts.
+
+Major deliverables: Public ingestion APIs, SDK surface, canonical trace and span mapping, artifact upload controls, validation, idempotency, and audit events.
+
+Explicit exclusions: Dataset authoring workflows, full experiment execution, evaluator engines, human review, dashboards beyond ingestion inspection, and deployment gates.
+
+Measurable acceptance criteria: Authorized ingestion creates tenant-scoped traces and runs, malformed input is rejected, duplicate submissions are idempotent, and trace data links to versioned artifacts.
+
+Dependencies on prior milestones: Milestones 0–4 approved.
+
+## Milestone 6 — Dataset and Test-Case Management
+
+Status: Not started.
+
+Objective: Implement dataset and test-case authoring, import, export, versioning, and snapshot workflows.
+
+Major deliverables: Dataset management UI or API, test-case CRUD within authorization boundaries, import and export, snapshot creation, validation, and retention metadata.
+
+Explicit exclusions: Full experiment execution, evaluator implementations, model judges, human-review adjudication, dashboards beyond dataset workflows, and deployment gates.
+
+Measurable acceptance criteria: Datasets and test cases are versioned, snapshots are immutable, tenant-scoped imports and exports are authorized, and audit history records material changes.
+
+Dependencies on prior milestones: Milestones 0–5 approved.
+
+## Milestone 7 — Experiment Execution and Reproducibility Engine
+
+Status: Not started.
+
+Objective: Implement durable experiment execution with reproducible run metadata and repeated-run support.
+
+Major deliverables: Experiment definitions, variants, run scheduling, attempts, repetition indexes, durable state transitions, retry and cancellation behavior, and completed-run immutability.
+
+Explicit exclusions: Deterministic evaluator library, model-based evaluation, human review, RAG-specific metrics, tool-use metrics, dashboards beyond execution state, and deployment gates.
+
+Measurable acceptance criteria: Experiments execute asynchronously with captured reproducibility metadata, retries are idempotent, completed runs are immutable, and failures preserve diagnostic evidence.
+
+Dependencies on prior milestones: Milestones 0–6 approved.
+
+## Milestone 8 — Deterministic Evaluation Framework
+
+Status: Not started.
+
+Objective: Implement deterministic evaluator contracts and initial deterministic metrics.
+
+Major deliverables: Evaluator interfaces, exact and normalized matching, schema validation, rule-based checks, reference scoring, aggregation, and test coverage for deterministic behavior.
+
+Explicit exclusions: Model judges, human-review workflows, RAG-specific advanced evaluation, agent trajectory evaluation, dashboards beyond deterministic results, and deployment gates.
+
+Measurable acceptance criteria: Deterministic evaluators are versioned, repeatable, isolated from model judges, and produce auditable metric observations and scores.
+
+Dependencies on prior milestones: Milestones 0–7 approved.
+
+## Milestone 9 — Model-Based and Human Evaluation
+
+Status: Not started.
+
+Objective: Implement model-judge and human-review workflows under evaluator isolation and review policy.
+
+Major deliverables: LLM-as-judge evaluator contracts, judge versioning, calibration evidence, rubric review, reviewer assignment, adjudication, inter-rater agreement, and audit history.
+
+Explicit exclusions: RAG-specific grounding metrics, tool-use and agent-trajectory evaluation, deployment gates, and final production hardening.
+
+Measurable acceptance criteria: Model judges are versioned and bounded by policy, human decisions are auditable, disagreements can be adjudicated, and model output is not used as authorization policy.
+
+Dependencies on prior milestones: Milestones 0–8 approved.
+
+## Milestone 10 — RAG, Grounding, and Citation Evaluation
+
+Status: Not started.
+
+Objective: Implement retrieval, grounding, faithfulness, and citation evaluation for RAG workflows.
+
+Major deliverables: Retrieval metrics, citation presence and validity checks, entailment and completeness metrics, groundedness, faithfulness, context relevance, and RAG failure analysis support.
+
+Explicit exclusions: Tool-use and agent-trajectory evaluation, deployment integration gates, and final hardening.
+
+Measurable acceptance criteria: RAG evaluations link answers to retrieved context and citations, document limitations, and support aggregate and per-test-case analysis.
+
+Dependencies on prior milestones: Milestones 0–9 approved.
+
+## Milestone 11 — Tool-Use, Agent-Trajectory, and Safety Evaluation
+
+Status: Not started.
+
+Objective: Implement evaluation for tool selection, tool arguments, tool-call sequences, agent trajectories, and safety policy behavior.
+
+Major deliverables: Tool-use metrics, trajectory success criteria, step-efficiency metrics, policy compliance checks, safety violation detection, refusal appropriateness, and trace-level diagnostics.
+
+Explicit exclusions: Deployment integration gates and final production hardening.
+
+Measurable acceptance criteria: Tool and agent evaluations use versioned tool and workflow definitions, preserve evidence, distinguish safety decisions from model output, and support regression analysis.
+
+Dependencies on prior milestones: Milestones 0–10 approved.
+
+## Milestone 12 — Metrics, Comparison, Regression, and Quality-Gate Engine
+
+Status: Not started.
+
+Objective: Implement aggregate metrics, comparison workflows, regression findings, and quality gates.
+
+Major deliverables: Metric aggregation, slices, confidence intervals where applicable, baseline comparison, regression magnitude, pass and error rates, gate criteria, gate decisions, and override audit.
+
+Explicit exclusions: CI/CD integration wiring, production deployment gates, and final hardening.
+
+Measurable acceptance criteria: Quality gates are deterministic over stored inputs where applicable, decisions are auditable, overrides are authorized, and regression findings link to evidence.
+
+Dependencies on prior milestones: Milestones 0–11 approved.
+
+## Milestone 13 — Dashboard, Trace Inspection, and Failure Analysis
+
+Status: Not started.
+
+Objective: Implement user-facing workflows for dashboards, trace inspection, review queues, comparison, and failure analysis.
+
+Major deliverables: Dashboard views, run and experiment inspection, trace and span drilldown, failure grouping, evaluator output review, human review workflows, and accessible UX states.
+
+Explicit exclusions: CI/CD integration, deployment gate wiring, and final production hardening.
+
+Measurable acceptance criteria: Users can navigate from aggregate results to evidence, inspect failures without cross-tenant leakage, and complete review workflows with audit history.
+
+Dependencies on prior milestones: Milestones 0–12 approved.
+
+## Milestone 14 — CI/CD, Integrations, and Deployment Gates
+
+Status: Not started.
+
+Objective: Connect EvalForge results and quality gates to development and deployment workflows.
+
+Major deliverables: CI/CD integration contracts, deployment gate checks, webhook verification, import and export integrations, status reporting, and authorized gate override paths.
+
+Explicit exclusions: Final hardening activities reserved for Milestone 15.
+
+Measurable acceptance criteria: Integrations verify callbacks, gate decisions are reproducible and auditable, unauthorized overrides fail, and deployment status reflects stored quality evidence.
+
+Dependencies on prior milestones: Milestones 0–13 approved.
+
+## Milestone 15 — Production Hardening, Demonstration, Documentation, and Final Acceptance
+
+Status: Not started.
+
+Objective: Harden, demonstrate, document, and complete final Phase 1 acceptance.
+
+Major deliverables: Security review, performance and recovery validation, demonstration data, final documentation, operational checks, accessibility review, and acceptance evidence.
+
+Explicit exclusions: New product scope not already authorized by the roadmap.
+
+Measurable acceptance criteria: All prior milestone evidence is complete, validation passes without unresolved failures, demonstration uses synthetic or redacted data, production hardening controls are documented, and the owner grants final acceptance.
+
+Dependencies on prior milestones: Milestones 0–14 approved.

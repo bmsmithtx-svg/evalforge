@@ -1,0 +1,59 @@
+# Tenancy And Authorization
+
+## Status
+
+This document defines the conceptual security model for later implementation. It does not implement authentication, database policies, middleware, or authorization code.
+
+## Tenant And Workspace Boundaries
+
+Tenant is the primary isolation and ownership boundary. A workspace or project belongs to exactly one tenant. Datasets, experiments, runs, traces, results, artifacts, reviews, gates, imports, exports, audit events, and background work must be tenant-scoped.
+
+Workspace boundaries may further restrict access inside a tenant, but workspace membership cannot grant cross-tenant access.
+
+## User Membership
+
+Users gain access through tenant membership and optional workspace membership. A user identity alone is not enough to authorize resource access. Membership changes must be audited with actor, target user, tenant, workspace when applicable, role change, timestamp, and outcome.
+
+## Role-Based Authorization
+
+Initial role categories for later implementation:
+
+- Tenant administrator: manages tenant settings, membership, and high-risk administrative actions.
+- Workspace administrator: manages workspace settings, members, datasets, experiments, and gates within a workspace.
+- Evaluation engineer: creates and manages datasets, evaluators, experiments, comparisons, and reports.
+- Developer: submits runs and traces, views authorized evidence, and manages target configurations.
+- Reviewer: performs assigned human reviews and sees required evidence.
+- Read-only observer: views authorized reports and evidence without mutation authority.
+- Service identity: performs scoped automated work with explicit permissions.
+
+Permissions must be enforced server-side for every protected command and read.
+
+## Resource Ownership
+
+Datasets, experiments, runs, traces, results, artifacts, reviews, and gates are owned by the tenant and, where applicable, the workspace. The human or service actor that creates a resource is recorded for audit but does not own the data outside the tenant policy.
+
+## Cross-Tenant Access Prohibition
+
+Cross-tenant reads, writes, exports, deletions, reviews, comparisons, gate decisions, and background processing are prohibited unless a future owner-approved policy explicitly creates a controlled administrative support path. UI filtering alone is never authorization.
+
+## Service Identities And Workers
+
+Service identities must have explicit tenant-scoped permissions. Background workers must execute under a service identity and verify that queued work belongs to the tenant and resource scope specified in the command. Queue messages must not be trusted as authorization proof.
+
+## Administrative Access
+
+Administrative access must be least-privilege, audited, and separated from normal user workflows. Administrative operators must not bypass tenant access rules silently. Emergency or support access, if later authorized, must record reason, actor, scope, time, and affected resources.
+
+## Import, Export, And Deletion Authorization
+
+Imports require permission to create or update the target resource. Exports require permission to read every included resource. Deletion requires explicit deletion permission and must respect retention, immutable evidence, audit, legal, and tenant-scoped deletion rules.
+
+## Tenant-Scoped Storage And Persistence
+
+Persistence must make tenant scope explicit in records, indexes, storage paths, object metadata, queue payloads, audit events, and authorization checks. Storage design must prevent accidental resource lookup by global ID without tenant verification.
+
+## Audit Requirements
+
+Authorization denials, membership changes, role changes, imports, exports, deletion requests, administrative actions, gate decisions, gate overrides, reviewer decisions, and service-identity actions must emit audit events.
+
+Related documents: [Domain Model](DOMAIN_MODEL.md), [Trust Boundaries](TRUST_BOUNDARIES.md), [Security Baseline](SECURITY_BASELINE.md), and ADR [0004](adr/0004-tenant-isolation-and-data-ownership.md).
