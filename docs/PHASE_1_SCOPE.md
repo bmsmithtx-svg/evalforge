@@ -51,8 +51,9 @@ All milestones must be completed and owner-approved in order. Milestone 2 or lat
 
 ## Assumptions And Limitations
 
-- Phase 1 contracts favor replaceable providers and infrastructure rather than early selection of specific vendors.
-- Exact implementation technology choices are deferred to authorized later milestones.
+- Phase 1 contracts favor replaceable providers and infrastructure without leaving the selected Phase 1 foundation undecided.
+- The locked Phase 1 foundation is Python 3.13, FastAPI, OpenAPI, Next.js, TypeScript, PostgreSQL, Redis, S3-compatible private object storage, OpenTelemetry-compatible telemetry, Docker Compose, GitHub Actions, and a root `make validate` entry point beginning in Milestone 2.
+- Milestone 1 may document these technology and architecture choices, but implementation work remains prohibited until its assigned milestone is authorized.
 - Public repository status requires synthetic or redacted examples and strict avoidance of committed secrets or private evaluation data.
 
 Related documents: [Project Charter](PROJECT_CHARTER.md), [Roadmap](ROADMAP.md), [Architecture](ARCHITECTURE.md), and [Security Baseline](SECURITY_BASELINE.md).

@@ -21,10 +21,12 @@ EvalForge is not yet an operational application. This repository currently conta
 ## Current Status
 
 - Milestone 0 — Repository and Local Workspace Setup: approved.
-- Milestone 1 — Product Charter, Architecture, Governance, and Threat Model: implemented and pending owner review.
+- Milestone 1 — Product Charter, Architecture, Governance, and Threat Model: owner-requested correction pass applied; implemented pending owner review after this correction.
 - Milestones 2–15: not started.
 
 Later milestones must follow the locked roadmap sequentially. No later-milestone functionality may be preimplemented before that milestone is authorized.
+
+The Milestone 1 documentation records the locked Phase 1 engineering foundation: one canonical monorepo using the existing `apps/`, `packages/`, `services/`, `infrastructure/`, `scripts/`, and `tests/` boundaries; modular-monolith architecture; Python 3.13 with FastAPI and OpenAPI for backend APIs; Next.js with TypeScript for the web application; PostgreSQL, Redis, S3-compatible private object storage, OpenTelemetry-compatible telemetry, Docker Compose, GitHub Actions, and a future root `make validate` entry point beginning in Milestone 2. These are documented implementation contracts, not currently implemented runtime components.
 
 ## Authoritative Documents
 

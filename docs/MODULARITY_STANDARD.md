@@ -6,9 +6,9 @@ This standard is binding for future implementation. Milestone 1 defines the poli
 
 ## File-Size Ceiling
 
-Every tracked, handwritten `.py`, `.ts`, `.tsx`, and `.js` file under application, package, service, script, and test directories must contain no more than 300 physical lines. Exactly 300 physical lines is allowed. A file with 301 physical lines fails validation. Nested directories are included.
+Every tracked, handwritten `.py`, `.ts`, `.tsx`, and `.js` file under `apps/`, `packages/`, `services/`, `scripts/`, and `tests/`, including all nested directories, must contain no more than 300 physical lines. Exactly 300 physical lines is allowed. A file with 301 physical lines fails validation.
 
-Generated clients, lockfiles, and specifically allowlisted generated migrations may be excluded. Any exclusion must be narrow, documented, and incapable of hiding handwritten application logic.
+Generated clients, lockfiles, and specifically allowlisted generated migrations may be excluded only through a narrow owner-approved ADR. Any exclusion must be documented and incapable of hiding handwritten application logic.
 
 ## Prohibited Dumping-Ground Modules
 
@@ -38,7 +38,7 @@ An exception may not authorize a generic dumping-ground module.
 
 ## Enforcement
 
-Automated enforcement will begin in Milestone 2 and must eventually run through local validation, architecture tests, pre-commit hooks, and GitHub Actions. Validation failures must identify every violating file and its physical line count.
+Automated enforcement will begin in Milestone 2 and must run through `make validate`, pre-commit hooks, architecture tests, and GitHub Actions. Validation failures must identify every violating file and its physical line count, and enforcement must report every violation rather than stop after the first.
 
 Any exception requires a specific owner-approved ADR before the nonconforming code is introduced. The exception must identify the exact file or generated-file class, reason, maximum scope, validation behavior, and expiration or revisit condition.
 

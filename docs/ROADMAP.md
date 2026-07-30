@@ -55,13 +55,18 @@ Dependencies on prior milestones: Milestone 0 approved.
 
 Status: Not started.
 
-Objective: Establish the engineering foundation authorized after Milestone 1 approval.
+Objective: Establish the engineering and infrastructure foundation authorized after Milestone 1 approval.
 
-Major deliverables: Initial workspace configuration, development tooling, validation commands, dependency policy enforcement, architectural test scaffolding, and local foundation for later services.
+Major deliverables:
 
-Explicit exclusions: Authentication, tenant isolation, domain persistence, production APIs, workers, SDKs, dashboards, evaluator engines, trace ingestion, deployment gates, and product features belonging to Milestones 3–15.
+- Backend foundation: Python 3.13 project and dependency configuration; FastAPI application factory; typed settings and environment validation; fail-closed validation for missing or invalid sensitive configuration; structured logging with secret redaction; health and readiness endpoints; standardized error-response boundary; dependency-injection and adapter boundaries; OpenAPI generation and validation; and no product-domain API behavior beyond foundation-level health, readiness, metadata, and connectivity verification.
+- Frontend foundation: Next.js and TypeScript workspace; basic application shell only; shared design primitives sufficient for later product work; typed API-client boundary; frontend environment validation; verified frontend-to-API connectivity; and no experiment, dataset, trace, evaluator, review, comparison, or dashboard product workflows.
+- Infrastructure foundation: PostgreSQL local service and connectivity checks; Redis local service and connectivity checks; S3-compatible local object-storage service and connectivity checks; migration framework with an empty or foundation-only migration baseline; Dockerfiles and Docker Compose local-development stack; reproducible local setup and teardown commands; isolated test configuration that does not require production data or production credentials; and OpenTelemetry-compatible service instrumentation foundation.
+- Engineering quality: formatting and linting; static type checking; unit and foundation integration tests; coverage configuration; pre-commit hooks; GitHub Actions CI; dependency and vulnerability scanning; secret scanning and hygiene validation; Markdown-link validation; automated modularity, forbidden-filename, dependency-boundary, and circular-import checks; and a root `Makefile` with `make validate` as the authoritative validation entry point.
 
-Measurable acceptance criteria: Foundation tooling is repeatable locally, validation reports every modularity violation, no functional platform behavior is introduced beyond foundation scope, and documentation reflects the implemented foundation.
+Explicit exclusions: Authentication implementation; authorization and tenant-isolation implementation; tenant and evaluation-domain persistence models; functional experiment execution; ingestion APIs and SDK product behavior; dataset and test-case workflows; evaluator implementations; model judges and human-review workflows; RAG, tool-use, agent, safety, comparison, regression, or gate engines; product dashboards; deployment integrations; and all Milestone 3–15 functionality.
+
+Measurable acceptance criteria: A clean clone can install the documented toolchain; the documented local-development stack starts successfully; API health and readiness checks pass; the frontend can reach the API; PostgreSQL, Redis, and object-storage connectivity are verified; invalid sensitive configuration fails closed; logs and error responses do not expose configured secrets; tests run without production data or live production services; `make validate` performs the complete required validation suite; CI passes from a clean checkout; every modularity violation is reported with its path and physical line count; and no unauthorized Milestone 3 or later product functionality is introduced.
 
 Dependencies on prior milestones: Milestones 0 and 1 approved.
 

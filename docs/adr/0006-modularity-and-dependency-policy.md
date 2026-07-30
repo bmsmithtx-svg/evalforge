@@ -10,13 +10,13 @@ EvalForge will grow across applications, packages, services, infrastructure, scr
 
 ## Decision
 
-Every tracked, handwritten `.py`, `.ts`, `.tsx`, and `.js` file under application, package, service, script, and test directories must contain no more than 300 physical lines. Exactly 300 physical lines is allowed. A file with 301 physical lines fails validation. Nested directories are included.
+Every tracked, handwritten `.py`, `.ts`, `.tsx`, and `.js` file under `apps/`, `packages/`, `services/`, `scripts/`, and `tests/`, including all nested directories, must contain no more than 300 physical lines. Exactly 300 physical lines is allowed. A file with 301 physical lines fails validation.
 
 Generic dumping-ground modules are prohibited, including `utils.py`, `helpers.py`, `common.py`, `utils.ts`, `helpers.ts`, `common.ts`, and equivalent generic catch-all modules.
 
 Generated clients, lockfiles, and specifically allowlisted generated migrations may be excluded only through narrow, documented exceptions incapable of hiding handwritten application logic. Any exception requires a specific owner-approved ADR before the nonconforming code is introduced. An exception may not authorize a generic dumping-ground module.
 
-Automated enforcement begins in Milestone 2 and must eventually run through local validation, architecture tests, pre-commit hooks, and GitHub Actions.
+Automated enforcement begins in Milestone 2 and must run through `make validate`, pre-commit hooks, architecture tests, and GitHub Actions. The Milestone 2 implementation must report every modularity violation with its path and physical line count rather than stop after the first.
 
 ## Rationale
 
