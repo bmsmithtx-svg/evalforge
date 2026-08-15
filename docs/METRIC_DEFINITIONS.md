@@ -13,6 +13,23 @@ This document defines planned metric meanings and contracts. It does not impleme
 - Confidence intervals communicate uncertainty where the sample size and metric type support it.
 - Deployment-gate decisions apply versioned thresholds to stored evidence and may consider metrics, review decisions, and authorized overrides.
 
+## Directionality And Missing-Data Handling
+
+Every metric in this document has a defined direction of improvement, and later implementation must record that direction alongside the metric definition rather than leaving it implicit:
+
+- Higher-is-better metrics: answer correctness, semantic similarity, groundedness, faithfulness, retrieval precision, retrieval recall, recall at K, precision at K, mean reciprocal rank, normalized discounted cumulative gain, context relevance, citation presence, citation validity, citation entailment, citation completeness, tool-selection accuracy, tool-argument validity, tool-call sequence correctness, agent-trajectory success, policy compliance (compliance rate framing), refusal appropriateness, human-review agreement, inter-rater agreement, and pass rate.
+- Lower-is-better metrics: hallucination rate, safety violation rate, latency, time to first token, token usage, model cost, total experiment cost, error rate, and policy compliance when expressed as a violation rate rather than a compliance rate.
+- Context-dependent metrics: step efficiency (fewer steps is not always better if quality falls, so this must be interpreted jointly with a quality metric) and regression magnitude (direction depends on which metric regressed and whether that metric is higher-is-better or lower-is-better).
+
+Metric definitions and dashboards must state which framing (rate of compliance versus rate of violation) is in use wherever a metric could reasonably be read either way, so comparisons are not silently inverted.
+
+Missing or error values must never be silently treated as zero, as a passing score, or as a failing score. Later implementation must:
+
+- Record a distinct missing-or-error state separate from any valid score, and exclude it from numeric aggregation by default.
+- Report the count and rate of missing-or-error observations alongside any aggregate computed from the remaining valid observations.
+- Distinguish an evaluator-execution error (the evaluator itself could not produce a result) from a genuine evaluated-system failure (the evaluator ran successfully and recorded a poor result), per [Evaluation Taxonomy](EVALUATION_TAXONOMY.md).
+- Disclose when missing-or-error observations are concentrated in a particular slice, since that concentration can bias an aggregate that appears complete.
+
 ## Planned Metrics
 
 | Metric | Intended meaning | Required inputs | Output type | Aggregation behavior and interpretation | Known limitations |

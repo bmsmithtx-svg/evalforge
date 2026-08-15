@@ -47,4 +47,5 @@ The Milestone 1 documentation records the locked Phase 1 engineering foundation:
 - [Threat Model](docs/THREAT_MODEL.md)
 - [Modularity Standard](docs/MODULARITY_STANDARD.md)
 - [Milestone Acceptance](docs/MILESTONE_ACCEPTANCE.md)
+- [Milestone 1 Completion Report](docs/MILESTONE_1_COMPLETION_REPORT.md)
 - [Architecture Decision Records](docs/adr/README.md)

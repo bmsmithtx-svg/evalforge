@@ -46,6 +46,15 @@ EvalForge is planned to support comparisons across:
 - Evaluator comparisons.
 - Pricing and cost comparisons.
 
+## Product Principles
+
+- Evidence over claims: documentation and product surfaces must distinguish what is implemented from what is planned, and must never present planned behavior as currently working.
+- Reproducibility over convenience: versioning and immutable snapshots take priority over ease of mutating in-place records, even when that adds friction to early implementation.
+- Tenant isolation is architecture, not UI: access control must be enforced server-side and in persistence; client-side filtering is never treated as authorization.
+- Human judgment governs high-stakes decisions: model-based evaluation may inform decisions but must not hold authorization, tenant-access, or deployment-gate override authority on its own.
+- Replaceability over lock-in: model, storage, queue, authentication, and trace-ingestion providers must remain swappable behind interfaces, even when a specific Phase 1 foundation is selected.
+- Sequential discipline over speed: milestones are completed and owner-approved in order, and later-milestone functionality is not preimplemented merely because it may be convenient later.
+
 ## Current Milestone Authorization
 
 Milestone 1 is authorized to create documentation, architecture, governance, security, product, and decision records. It may define future contracts for runtime behavior but must not implement application code, APIs, workers, SDKs, dashboards, authentication, tenant isolation, evaluators, persistence, infrastructure, dependencies, or CI/CD.
@@ -53,6 +62,17 @@ Milestone 1 is authorized to create documentation, architecture, governance, sec
 ## Phase 1 Product Boundary
 
 Phase 1 covers the locked roadmap from Milestone 0 through Milestone 15. The desired end state is a production-oriented demonstration of an evaluation platform with reproducible runs, versioned artifacts, trace ingestion, deterministic and model-based evaluation, human review, dashboards, integration gates, and documented hardening.
+
+## Success Criteria
+
+Phase 1 is successful when, by Milestone 15 final acceptance:
+
+- A user can define an experiment, run it against an immutable dataset snapshot across at least the direct-LLM, RAG, tool-using, and agent system categories, and retrieve reproducible, explainable evidence for the result.
+- Deterministic evaluation, model-based evaluation, and human review are all available as evidence sources for a comparison, with model-judge output disclosed as fallible rather than authoritative.
+- Tenant isolation is demonstrably enforced server-side across persistence, authorization, export, and background execution, with no cross-tenant access achievable through supported paths.
+- A regression or quality-gate decision can be traced back to the specific runs, metrics, and review decisions that produced it, with audit history intact.
+- Every milestone from 0 through 15 has been completed within its authorized scope, validated, and explicitly approved by the owner in sequence, with no later-milestone functionality preimplemented early.
+- The finished platform functions as a credible portfolio demonstration of product thinking, domain modeling, security and tenancy design, and evaluation literacy for AI systems, per [Portfolio and Engineering Skills Demonstrated](#portfolio-and-engineering-skills-demonstrated).
 
 ## Outside Phase 1
 

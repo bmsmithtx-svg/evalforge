@@ -12,7 +12,7 @@ Deterministic evaluators produce the same output for the same inputs, configurat
 
 ### 2. Model-Based Evaluation
 
-Model-based evaluators use an LLM or other model as a judge. They include LLM-as-judge evaluation, semantic scoring, groundedness checks, citation entailment checks, pairwise comparison, and rubric-based review assistance. Judge model identity, prompt, rubric, calibration set, configuration, and thresholds must be versioned. Model judges are fallible and must not be treated as an unquestionable source of truth.
+Model-based evaluators use an LLM or other model as a judge. They include LLM-as-judge evaluation, semantic scoring, groundedness checks, citation entailment checks, pairwise comparison, and rubric-based review assistance. Judge model identity, prompt, rubric, calibration set, configuration, and thresholds must be versioned. Model judges are fallible and must not be treated as an unquestionable source of truth. Documented judge limitations must include prompt sensitivity, model-version drift, nondeterminism, positional bias (favoring an option by its position or order in the input), verbosity bias (favoring longer or more elaborate responses regardless of correctness), self-preference bias (favoring outputs produced by the same model family as the judge), and correlated failure across evaluations that reuse the same judge.
 
 ### 3. Human Evaluation
 
@@ -23,6 +23,8 @@ Human evaluation captures reviewer judgments under versioned rubrics. It include
 Evaluators are categorized by family, metric outputs, supported input evidence, deterministic or nondeterministic behavior, calibration requirements, and risk level. Each evaluator must have a stable evaluator identity and immutable evaluator version when used for recorded results.
 
 Configuration must capture thresholds, normalization rules, judge prompts, model parameters, rubric versions, reference data, retrieval settings, safety policies, and aggregation rules where applicable. Invocation must record inputs, evaluator version, execution timestamp, errors, and output. Interpretation must disclose limitations and avoid collapsing raw evidence, scores, aggregate metrics, and gate decisions into a single unsupported claim.
+
+An evaluator error must be distinguished from an evaluated-system failure. An evaluator error means the evaluator itself could not produce a valid result, for example a judge-model timeout, a malformed evaluator configuration, or a parsing failure, and must be recorded as an evaluator-execution error rather than a score. An evaluated-system failure means the evaluator executed successfully and produced a valid result showing that the evaluated application performed poorly, for example an incorrect answer or an unsafe tool call. Aggregation and reporting must keep these two categories separate so that evaluator outages are not misread as quality regressions, and quality regressions are not hidden as evaluator noise.
 
 ## Required Evaluator Categories
 
