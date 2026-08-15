@@ -16,18 +16,30 @@ Phase 1 is planned to establish:
 - Comparison, regression, quality-gate, review, import, export, and failure-analysis workflows.
 - Authentication, tenant isolation, audit history, and security controls in later milestones.
 
-EvalForge is not yet an operational application. This repository currently contains the Milestone 0 skeleton and Milestone 1 product, architecture, governance, and security contracts only.
+EvalForge is not yet a product with evaluation functionality. This repository currently contains the Milestone 0 workspace skeleton, the Milestone 1 product/architecture/governance contracts, and the Milestone 2 engineering and infrastructure foundation: a FastAPI control/API service, a Next.js web application shell, and a local PostgreSQL/Redis/S3-compatible development stack. No product-domain functionality (datasets, experiments, evaluators, dashboards, authentication, tenant isolation) exists yet — that begins in Milestone 3 and later.
 
 ## Current Status
 
 - Milestone 0 — Repository and Local Workspace Setup: approved.
 - Milestone 1 — Product Charter, Architecture, Governance, and Threat Model: approved.
-- Milestone 2 — Engineering and Infrastructure Foundation: in progress.
+- Milestone 2 — Engineering and Infrastructure Foundation: implemented pending owner review.
 - Milestones 3–15: not started.
 
 Later milestones must follow the locked roadmap sequentially. No later-milestone functionality may be preimplemented before that milestone is authorized.
 
-The Milestone 1 documentation records the locked Phase 1 engineering foundation: one canonical monorepo using the existing `apps/`, `packages/`, `services/`, `infrastructure/`, `scripts/`, and `tests/` boundaries; modular-monolith architecture; Python 3.13 with FastAPI and OpenAPI for backend APIs; Next.js with TypeScript for the web application; PostgreSQL, Redis, S3-compatible private object storage, OpenTelemetry-compatible telemetry, Docker Compose, GitHub Actions, and a future root `make validate` entry point beginning in Milestone 2. These are documented implementation contracts, not currently implemented runtime components.
+The Milestone 1 documentation records the locked Phase 1 engineering foundation: one canonical monorepo using the existing `apps/`, `packages/`, `services/`, `infrastructure/`, `scripts/`, and `tests/` boundaries; modular-monolith architecture; Python 3.13 with FastAPI and OpenAPI for backend APIs; Next.js with TypeScript for the web application; PostgreSQL, Redis, S3-compatible private object storage, OpenTelemetry-compatible telemetry, Docker Compose, GitHub Actions, and a root `make validate` entry point. Milestone 2 implements that foundation: `services/api` (FastAPI, typed settings, structured logging with redaction, standardized error handling, request-size and rate-limit foundations, health/readiness endpoints, PostgreSQL/Redis/object-storage connectivity checks, an Alembic migration baseline), `apps/web` (Next.js/TypeScript shell with a typed API client and environment validation), `infrastructure/docker-compose.yml` (local PostgreSQL, Redis, MinIO, API, and web services), and `scripts/` plus `Makefile`/`make validate`/`.github/workflows/ci.yml` for modularity, dependency-boundary, circular-import, forbidden-filename, markdown-link, and secret-pattern validation. See [Milestone 2 Completion Report](docs/MILESTONE_2_COMPLETION_REPORT.md) for verification evidence.
+
+## Local Development
+
+Requires Python 3.13, Node.js 20+, and Docker with Compose.
+
+```bash
+make up        # start PostgreSQL, Redis, MinIO, API, and web via Docker Compose
+make validate  # lint, type-check, test, and run foundation checks
+make down      # stop and remove the local stack
+```
+
+The API serves `http://localhost:8000` (`/healthz`, `/readyz`, `/docs`) and the web app serves `http://localhost:3000`. Copy `services/api/.env.example` and `apps/web/.env.example` to `.env` files if running either service outside Docker Compose.
 
 ## Authoritative Documents
 
@@ -49,4 +61,5 @@ The Milestone 1 documentation records the locked Phase 1 engineering foundation:
 - [Modularity Standard](docs/MODULARITY_STANDARD.md)
 - [Milestone Acceptance](docs/MILESTONE_ACCEPTANCE.md)
 - [Milestone 1 Completion Report](docs/MILESTONE_1_COMPLETION_REPORT.md)
+- [Milestone 2 Completion Report](docs/MILESTONE_2_COMPLETION_REPORT.md)
 - [Architecture Decision Records](docs/adr/README.md)

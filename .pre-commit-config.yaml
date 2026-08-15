@@ -1,0 +1,72 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.7.4
+    hooks:
+      - id: ruff
+        name: ruff (api)
+        args: [--fix]
+        files: ^services/api/
+      - id: ruff-format
+        name: ruff-format (api)
+        files: ^services/api/
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+
+  - repo: local
+    hooks:
+      - id: web-eslint
+        name: eslint (web)
+        entry: bash -c 'cd apps/web && npm run lint'
+        language: system
+        files: ^apps/web/.*\.(ts|tsx)$
+        pass_filenames: false
+
+      - id: web-prettier
+        name: prettier --check (web)
+        entry: bash -c 'cd apps/web && npm run format:check'
+        language: system
+        files: ^apps/web/
+        pass_filenames: false
+
+      - id: modularity-check
+        name: modularity check (300-line ceiling)
+        entry: python3 scripts/validate_modularity.py
+        language: system
+        pass_filenames: false
+
+      - id: forbidden-filenames-check
+        name: forbidden dumping-ground filenames
+        entry: python3 scripts/validate_forbidden_filenames.py
+        language: system
+        pass_filenames: false
+
+      - id: markdown-link-check
+        name: markdown link check
+        entry: python3 scripts/validate_markdown_links.py
+        language: system
+        pass_filenames: false
+
+      - id: dependency-boundary-check
+        name: dependency boundary check
+        entry: python3 scripts/validate_dependency_boundaries.py
+        language: system
+        pass_filenames: false
+
+      - id: circular-import-check
+        name: circular import check
+        entry: python3 scripts/validate_circular_imports.py
+        language: system
+        pass_filenames: false
+
+      - id: secret-scan
+        name: secret pattern scan
+        entry: python3 scripts/validate_no_secrets.py
+        language: system
+        pass_filenames: false

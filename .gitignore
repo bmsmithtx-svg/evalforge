@@ -1,3 +1,28 @@
 .DS_Store
 .idea/
 .vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node / Next.js
+node_modules/
+.next/
+coverage/
+*.tsbuildinfo
+
+# Environment files (never commit real secrets; .env.example files are tracked)
+.env
+.env.local
+.env.*.local
+
+# Object storage / database local volumes
+infrastructure/.data/

@@ -1,0 +1,58 @@
+:root {
+  color-scheme: light dark;
+  --evalforge-fg: #111827;
+  --evalforge-bg: #ffffff;
+  --evalforge-border: #d1d5db;
+  --evalforge-ok: #15803d;
+  --evalforge-fail: #b91c1c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --evalforge-fg: #f3f4f6;
+    --evalforge-bg: #111827;
+    --evalforge-border: #374151;
+  }
+}
+
+body {
+  margin: 0;
+  color: var(--evalforge-fg);
+  background: var(--evalforge-bg);
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+}
+
+main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.card {
+  border: 1px solid var(--evalforge-border);
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.status-badge--ok {
+  color: var(--evalforge-ok);
+  background: color-mix(in srgb, var(--evalforge-ok) 15%, transparent);
+}
+
+.status-badge--fail {
+  color: var(--evalforge-fail);
+  background: color-mix(in srgb, var(--evalforge-fail) 15%, transparent);
+}

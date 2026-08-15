@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  foundation-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: python3 scripts/validate_modularity.py
+      - run: python3 scripts/validate_forbidden_filenames.py
+      - run: python3 scripts/validate_markdown_links.py
+      - run: python3 scripts/validate_dependency_boundaries.py
+      - run: python3 scripts/validate_circular_imports.py
+      - run: python3 scripts/validate_no_secrets.py
+
+  api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -e ".[dev]"
+      - run: ruff check src tests alembic
+      - run: ruff format --check src tests alembic
+      - run: mypy src
+      - run: pytest
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+        env:
+          API_BASE_URL: http://localhost:8000
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: npm audit (web)
+        working-directory: apps/web
+        run: npm audit --audit-level=high
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: pip install and vulnerability check (api)
+        working-directory: services/api
+        run: |
+          pip install -e ".[dev]" pip-audit
+          pip-audit --strict --skip-editable
+
+  local-stack-integration:
+    runs-on: ubuntu-latest
+    needs: [foundation-checks, api, web]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start local development stack
+        working-directory: infrastructure
+        run: docker compose up --build -d
+      - name: Wait for API readiness
+        run: |
+          for _ in $(seq 1 30); do
+            if curl -fsS http://localhost:8000/readyz; then exit 0; fi
+            sleep 2
+          done
+          echo "API never became ready" >&2
+          exit 1
+      - name: Verify frontend can reach the API
+        run: |
+          for _ in $(seq 1 30); do
+            if curl -fsS http://localhost:3000/ | grep -q "EvalForge"; then exit 0; fi
+            sleep 2
+          done
+          echo "Frontend never became reachable" >&2
+          exit 1
+      - name: Tear down stack
+        if: always()
+        working-directory: infrastructure
+        run: docker compose down -v
