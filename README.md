@@ -21,8 +21,9 @@ EvalForge is not yet an operational application. This repository currently conta
 ## Current Status
 
 - Milestone 0 — Repository and Local Workspace Setup: approved.
-- Milestone 1 — Product Charter, Architecture, Governance, and Threat Model: owner-requested correction pass applied; implemented pending owner review after this correction.
-- Milestones 2–15: not started.
+- Milestone 1 — Product Charter, Architecture, Governance, and Threat Model: approved.
+- Milestone 2 — Engineering and Infrastructure Foundation: in progress.
+- Milestones 3–15: not started.
 
 Later milestones must follow the locked roadmap sequentially. No later-milestone functionality may be preimplemented before that milestone is authorized.
 

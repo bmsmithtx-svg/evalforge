@@ -22,15 +22,23 @@ Phase 1 is planned to support:
 
 ## Authorized In Milestone 1
 
-Milestone 1 is authorized to create and update only product, architecture, domain, evaluation, governance, security, threat-model, modularity, roadmap, acceptance, and ADR documentation. The current milestone may describe future runtime behavior as requirements or contracts. It must not claim those capabilities currently exist.
+Milestone 1 was authorized to create and update only product, architecture, domain, evaluation, governance, security, threat-model, modularity, roadmap, acceptance, and ADR documentation. Milestone 1 is approved; see [Roadmap](ROADMAP.md) and [Milestone 1 Completion Report](MILESTONE_1_COMPLETION_REPORT.md).
 
 ## Explicit Milestone 1 Exclusions
 
-Milestone 1 does not authorize:
+Milestone 1 did not authorize:
 
 - Application or library source code.
 - Package-manager, workspace, framework, dependency, lockfile, pre-commit, or CI/CD configuration.
 - APIs, SDKs, workers, CLIs, dashboards, authentication, tenant isolation, databases, migrations, queues, Docker services, infrastructure, evaluators, trace ingestion, experiments, test data, model integrations, human-review UI, or deployment gates.
+
+## Authorized In Milestone 2
+
+Milestone 2 is authorized, per the Milestone 2 definition in [Roadmap](ROADMAP.md), to create backend, frontend, and infrastructure foundation code and configuration: Python/FastAPI application skeleton, Next.js/TypeScript application shell, package-manager and workspace configuration, local Docker services for PostgreSQL, Redis, and S3-compatible object storage, a foundation-only migration baseline, OpenTelemetry-compatible instrumentation foundation, and engineering-quality tooling (formatting, linting, type checking, tests, CI, modularity and secret-scanning checks, and `make validate`).
+
+## Explicit Milestone 2 Exclusions
+
+Milestone 2 does not authorize authentication implementation, authorization or tenant-isolation implementation, evaluation-domain persistence models, functional experiment execution, ingestion APIs or SDK product behavior, dataset or test-case workflows, evaluator implementations, model judges or human-review workflows, RAG/tool-use/agent/safety/comparison/regression/gate engines, product dashboards, deployment integrations, or any Milestone 3 or later functionality.
 
 ## Phase 1 Non-Goals
 

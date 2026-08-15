@@ -57,8 +57,12 @@ Validation run on 2026-08-10:
 - Secret-pattern scan for common committed key formats across `README.md` and `docs/`: passed.
 - Scope check for implementation/config files in `apps/`, `infrastructure/`, `scripts/`, `services/`, and `tests/`: passed; only `.gitkeep` placeholders remain.
 
-## Residual Risks
+## Residual Risks (As Of Original Report)
 
-- Owner review remains pending.
-- Local `HEAD` has not changed because this is an uncommitted correction change set.
-- A final clean working tree requires committing or otherwise disposing of this documentation-only change set after review.
+- Owner review was pending as of the original 2026-08-10 report and second correction round.
+
+## Owner Approval
+
+- The second correction round described above was committed at `44711a3` and pushed to `origin/main`.
+- The owner reviewed and approved Milestone 1 on 2026-08-14. Roadmap status updated to Approved in [Roadmap](ROADMAP.md) and [README](../README.md).
+- The owner authorized Milestone 2 (Engineering and Infrastructure Foundation) to begin on 2026-08-14, per the Milestone 2 definition in [Roadmap](ROADMAP.md).

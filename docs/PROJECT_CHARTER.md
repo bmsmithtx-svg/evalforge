@@ -57,7 +57,7 @@ EvalForge is planned to support comparisons across:
 
 ## Current Milestone Authorization
 
-Milestone 1 is authorized to create documentation, architecture, governance, security, product, and decision records. It may define future contracts for runtime behavior but must not implement application code, APIs, workers, SDKs, dashboards, authentication, tenant isolation, evaluators, persistence, infrastructure, dependencies, or CI/CD.
+Milestone 1 (documentation, architecture, governance, security, product, and decision records) is approved. Milestone 2 (Engineering and Infrastructure Foundation) is authorized per [Roadmap](ROADMAP.md) and is in progress: backend, frontend, and infrastructure foundation code, dependency and workspace configuration, local Docker services, and engineering-quality tooling are now authorized within the Milestone 2 boundary defined in the Roadmap. Milestone 2 does not authorize authentication implementation, tenant-isolation implementation, evaluation-domain persistence, functional experiment execution, evaluator implementations, dashboards, or any Milestone 3 or later product functionality.
 
 ## Phase 1 Product Boundary
 

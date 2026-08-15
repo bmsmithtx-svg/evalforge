@@ -7,8 +7,8 @@ The EvalForge roadmap contains exactly Milestones 0 through 15 in the order belo
 | Milestone | Title | Status |
 | --- | --- | --- |
 | 0 | Repository and Local Workspace Setup | Approved |
-| 1 | Product Charter, Architecture, Governance, and Threat Model | Implemented pending owner review |
-| 2 | Engineering and Infrastructure Foundation | Not started |
+| 1 | Product Charter, Architecture, Governance, and Threat Model | Approved |
+| 2 | Engineering and Infrastructure Foundation | In progress |
 | 3 | Authentication, Authorization, and Tenant Isolation | Not started |
 | 4 | Versioned Evaluation Domain and Persistence | Not started |
 | 5 | SDK, API, Trace, and Run Ingestion | Not started |
@@ -39,7 +39,7 @@ Dependencies on prior milestones: None.
 
 ## Milestone 1 — Product Charter, Architecture, Governance, and Threat Model
 
-Status: Implemented pending owner review.
+Status: Approved. Owner approval recorded 2026-08-14; see [Milestone 1 Completion Report](MILESTONE_1_COMPLETION_REPORT.md).
 
 Objective: Establish authoritative product, architecture, evaluation, security, governance, tenancy, reproducibility, and modularity contracts for later milestones.
 
@@ -53,7 +53,7 @@ Dependencies on prior milestones: Milestone 0 approved.
 
 ## Milestone 2 — Engineering and Infrastructure Foundation
 
-Status: Not started.
+Status: In progress. Authorized by owner 2026-08-14 following Milestone 1 approval.
 
 Objective: Establish the engineering and infrastructure foundation authorized after Milestone 1 approval.
 
