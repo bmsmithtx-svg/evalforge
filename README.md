@@ -22,7 +22,7 @@ EvalForge is not yet a product with evaluation functionality. This repository cu
 
 - Milestone 0 — Repository and Local Workspace Setup: approved.
 - Milestone 1 — Product Charter, Architecture, Governance, and Threat Model: approved.
-- Milestone 2 — Engineering and Infrastructure Foundation: implemented pending owner review.
+- Milestone 2 — Engineering and Infrastructure Foundation: approved.
 - Milestones 3–15: not started.
 
 Later milestones must follow the locked roadmap sequentially. No later-milestone functionality may be preimplemented before that milestone is authorized.

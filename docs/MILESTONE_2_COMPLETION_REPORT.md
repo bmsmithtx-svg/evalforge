@@ -12,10 +12,12 @@ Date: 2026-08-15.
 
 - Milestone 0: Approved.
 - Milestone 1: Approved.
-- Milestone 2: Implemented pending owner review.
+- Milestone 2: Approved.
 - Milestones 3-15: Not started.
 
-Milestone 2 is not approved until the owner explicitly approves it. Milestone 3 work must not begin until that approval is recorded.
+## Owner Approval
+
+The owner approved Milestone 2 on 2026-08-15. Milestone 3 (Authentication, Authorization, and Tenant Isolation) is not yet authorized; the owner has indicated it will be requested in a separate session.
 
 ## Change Set
 
