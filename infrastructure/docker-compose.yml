@@ -59,6 +59,26 @@ services:
       "
     restart: "no"
 
+  migrate:
+    build:
+      context: ../services/api
+    entrypoint: ["alembic", "upgrade", "head"]
+    environment:
+      EVALFORGE_ENVIRONMENT: local
+      EVALFORGE_DATABASE_URL: postgresql://evalforge:evalforge-local-dev@postgres:5432/evalforge
+      EVALFORGE_APP_DATABASE_URL: postgresql://evalforge_app:evalforge-app-local-dev@postgres:5432/evalforge
+      EVALFORGE_APP_DB_PASSWORD: evalforge-app-local-dev
+      EVALFORGE_REDIS_URL: redis://redis:6379/0
+      EVALFORGE_OBJECT_STORAGE_ENDPOINT_URL: http://object-storage:9000
+      EVALFORGE_OBJECT_STORAGE_ACCESS_KEY: evalforge-local-dev
+      EVALFORGE_OBJECT_STORAGE_SECRET_KEY: evalforge-local-dev-secret
+      EVALFORGE_OBJECT_STORAGE_BUCKET: evalforge-local
+      EVALFORGE_JWT_SIGNING_KEY: evalforge-local-dev-jwt-signing-key-never-use-in-production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   api:
     build:
       context: ../services/api
@@ -66,6 +86,7 @@ services:
       EVALFORGE_ENVIRONMENT: local
       EVALFORGE_LOG_LEVEL: INFO
       EVALFORGE_DATABASE_URL: postgresql://evalforge:evalforge-local-dev@postgres:5432/evalforge
+      EVALFORGE_APP_DATABASE_URL: postgresql://evalforge_app:evalforge-app-local-dev@postgres:5432/evalforge
       EVALFORGE_REDIS_URL: redis://redis:6379/0
       EVALFORGE_OBJECT_STORAGE_ENDPOINT_URL: http://object-storage:9000
       EVALFORGE_OBJECT_STORAGE_ACCESS_KEY: evalforge-local-dev
@@ -73,6 +94,10 @@ services:
       EVALFORGE_OBJECT_STORAGE_BUCKET: evalforge-local
       EVALFORGE_OBJECT_STORAGE_USE_TLS: "false"
       EVALFORGE_CORS_ALLOWED_ORIGINS: '["http://localhost:3000"]'
+      EVALFORGE_JWT_SIGNING_KEY: evalforge-local-dev-jwt-signing-key-never-use-in-production
+      EVALFORGE_JWT_ISSUER: evalforge
+      EVALFORGE_JWT_AUDIENCE: evalforge-api
+      EVALFORGE_JWT_ACCESS_TOKEN_TTL_SECONDS: "900"
     ports:
       - "8000:8000"
     depends_on:
@@ -81,6 +106,8 @@ services:
       redis:
         condition: service_healthy
       object-storage-init:
+        condition: service_completed_successfully
+      migrate:
         condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]

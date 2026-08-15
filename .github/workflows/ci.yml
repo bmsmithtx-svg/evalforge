@@ -25,6 +25,20 @@ jobs:
     defaults:
       run:
         working-directory: services/api
+    services:
+      postgres-test:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: evalforge
+          POSTGRES_PASSWORD: evalforge-test
+          POSTGRES_DB: evalforge_test
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U evalforge -d evalforge_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

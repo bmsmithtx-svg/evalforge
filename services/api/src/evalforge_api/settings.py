@@ -41,7 +41,16 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"  # noqa: S104 -- binds inside a container; not exposed directly
     port: int = Field(default=8000, ge=1, le=65535)
 
+    # Administrative DSN used only for migrations and readiness checks.
     database_url: PostgresDsn
+
+    # Least-privilege DSN the running application uses for every
+    # request-serving query. A distinct, non-superuser role from
+    # `database_url` so PostgreSQL row-level security on tenant-owned
+    # tables actually applies — table owners and superusers bypass RLS
+    # regardless of policy definitions.
+    app_database_url: PostgresDsn
+
     redis_url: RedisDsn
 
     object_storage_endpoint_url: str
@@ -59,11 +68,17 @@ class Settings(BaseSettings):
 
     readiness_timeout_seconds: float = Field(default=2.0, gt=0)
 
+    jwt_signing_key: str = Field(min_length=32)
+    jwt_issuer: str = "evalforge"
+    jwt_audience: str = "evalforge-api"
+    jwt_access_token_ttl_seconds: int = Field(default=900, gt=0)
+
     @field_validator(
         "object_storage_endpoint_url",
         "object_storage_access_key",
         "object_storage_secret_key",
         "object_storage_bucket",
+        "jwt_signing_key",
     )
     @classmethod
     def _reject_placeholder_secrets(cls, value: str, info: object) -> str:

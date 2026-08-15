@@ -13,6 +13,7 @@ from typing import Any
 
 import structlog
 from fastapi import FastAPI, Request, status
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
@@ -45,7 +46,11 @@ def register_error_handlers(app: FastAPI) -> None:
                 error_id=error_id,
                 code="validation_error",
                 message="The request did not match the expected schema.",
-                details=exc.errors(),
+                # Custom Pydantic validators can raise arbitrary
+                # exceptions, and exc.errors() embeds them verbatim
+                # under ctx.error — jsonable_encoder makes the whole
+                # structure JSON-safe instead of erroring mid-response.
+                details=jsonable_encoder(exc.errors()),
             ),
         )
 

@@ -8,21 +8,18 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from evalforge_api.dependency_wiring import build_connectivity_checks
+from evalforge_api.adapters.postgres_pool import create_pool
+from evalforge_api.dependency_wiring import build_connectivity_checks, build_identity_repositories
 from evalforge_api.error_handling import register_error_handlers
 from evalforge_api.logging_setup import configure_logging, get_logger
 from evalforge_api.middleware.rate_limit import RateLimitMiddleware
 from evalforge_api.middleware.request_size_limit import RequestSizeLimitMiddleware
-from evalforge_api.routes import health, readiness
+from evalforge_api.routes import auth, health, readiness, tenants
 from evalforge_api.settings import Settings, get_settings
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
-    """Build a configured FastAPI application.
-
-    Milestone 2 scope: foundation-level health, readiness, and metadata
-    only. No product-domain routes are registered here.
-    """
+    """Build a configured FastAPI application."""
     settings = settings or get_settings()
     configure_logging(settings)
     logger = get_logger(__name__)
@@ -30,14 +27,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.connectivity_checks = build_connectivity_checks(settings)
+        pool = await create_pool(str(settings.app_database_url))
+        app.state.db_pool = pool
+        app.state.identity_repositories = build_identity_repositories(pool)
         logger.info("evalforge_api_startup", environment=settings.environment)
         yield
+        await pool.close()
         logger.info("evalforge_api_shutdown")
 
     app = FastAPI(
         title="EvalForge API",
-        version="0.2.0",
-        description="EvalForge control/API service. Milestone 2 engineering foundation.",
+        version="0.3.0",
+        description="EvalForge control/API service — authentication and tenant isolation.",
         lifespan=lifespan,
     )
 
@@ -62,7 +63,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     register_error_handlers(app)
 
+    # Routes depend on get_settings via FastAPI's Depends() so they can
+    # be unit-tested without touching process-wide state. Overriding it
+    # here ensures every route sees the same settings instance this
+    # factory was built with, rather than the separately cached,
+    # environment-sourced get_settings() singleton.
+    app.dependency_overrides[get_settings] = lambda: settings
+
     app.include_router(health.router)
     app.include_router(readiness.router)
+    app.include_router(auth.router)
+    app.include_router(tenants.router)
 
     return app

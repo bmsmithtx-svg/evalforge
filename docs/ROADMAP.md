@@ -9,7 +9,7 @@ The EvalForge roadmap contains exactly Milestones 0 through 15 in the order belo
 | 0 | Repository and Local Workspace Setup | Approved |
 | 1 | Product Charter, Architecture, Governance, and Threat Model | Approved |
 | 2 | Engineering and Infrastructure Foundation | Approved |
-| 3 | Authentication, Authorization, and Tenant Isolation | Not started |
+| 3 | Authentication, Authorization, and Tenant Isolation | Implemented; pending owner review |
 | 4 | Versioned Evaluation Domain and Persistence | Not started |
 | 5 | SDK, API, Trace, and Run Ingestion | Not started |
 | 6 | Dataset and Test-Case Management | Not started |
@@ -72,7 +72,7 @@ Dependencies on prior milestones: Milestones 0 and 1 approved.
 
 ## Milestone 3 — Authentication, Authorization, and Tenant Isolation
 
-Status: Not started.
+Status: Implementation completed and validated 2026-08-15; owner review pending. See [Milestone 3 Completion Report](MILESTONE_3_COMPLETION_REPORT.md).
 
 Objective: Implement the initial security model for users, service identities, roles, permissions, and tenant-scoped enforcement.
 

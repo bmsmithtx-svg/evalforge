@@ -2,7 +2,7 @@
 
 ## Status
 
-This document defines the conceptual security model for later implementation. It does not implement authentication, database policies, middleware, or authorization code.
+This document defines the conceptual security model. Milestone 3 implements the initial authentication boundary, tenant-membership model, centralized authorization, and database-level tenant isolation described below; see [Implementation Notes (Milestone 3)](#implementation-notes-milestone-3) for how each concept maps to running code. Workspace-scoped authorization, service-identity provisioning workflows, and administrative/emergency access paths remain conceptual until a later milestone implements them.
 
 ## Tenant And Workspace Boundaries
 
@@ -56,4 +56,15 @@ Persistence must make tenant scope explicit in records, indexes, storage paths, 
 
 Authorization denials, membership changes, role changes, imports, exports, deletion requests, administrative actions, gate decisions, gate overrides, reviewer decisions, and service-identity actions must emit audit events.
 
-Related documents: [Domain Model](DOMAIN_MODEL.md), [Trust Boundaries](TRUST_BOUNDARIES.md), [Security Baseline](SECURITY_BASELINE.md), and ADR [0004](adr/0004-tenant-isolation-and-data-ownership.md).
+## Implementation Notes (Milestone 3)
+
+- **Authentication**: `services/api/src/evalforge_api/security/tokens.py` issues and verifies HS256 JWTs signed with a required, fail-closed, minimum-32-character `EVALFORGE_JWT_SIGNING_KEY`. Verification always checks signature, issuer, audience, and expiry (`services/api/src/evalforge_api/security/dependencies.py:get_current_principal`), and re-reads the user's live status from the database on every request rather than trusting a claim, so a disabled account loses access immediately instead of at token expiry. `services/api/src/evalforge_api/routes/auth.py` exposes `POST /auth/register`, `POST /auth/login`, and `GET /auth/me`.
+- **Identity**: the `users` table (migration `20260815_0002_identity_and_tenancy.py`) keys on an application-generated UUID, independent of the `auth_provider` / `provider_subject` columns that will carry external-identity mappings when a later milestone adds a non-local provider — no tenant-owned data needs to be re-keyed when that happens. A `kind` column (`human` / `service`) is the foundation for the service-identity concept above; provisioning workflows for service identities remain a later milestone.
+- **Tenant and membership model**: `tenants` and `tenant_memberships` tables implement the tenant and membership contracts above. `tenant_memberships` enforces `UNIQUE (user_id, tenant_id)` and foreign keys to both parents, so a membership can only reference a real user and a real tenant and a user cannot hold two roles in the same tenant.
+- **Roles**: `services/api/src/evalforge_api/domain/enums.py:TenantRole` implements the tenant-level role set fixed above (workspace administrator and service identity are excluded because no workspace entity exists yet and service identities are not tenant-membership roles).
+- **Authorization**: `services/api/src/evalforge_api/domain/actions.py` is the single, deny-by-default permission table every route consults (via `TenantContext.can()`) instead of comparing role strings inline.
+- **Tenant context**: `services/api/src/evalforge_api/security/dependencies.py:get_tenant_context` independently verifies an active membership for the path's tenant ID before constructing a `TenantContext`; a client-supplied tenant ID is only ever a request, never a grant.
+- **Database isolation**: `tenant_memberships` carries PostgreSQL row-level security (`ENABLE`/`FORCE ROW LEVEL SECURITY`), and the running API connects as a separate, non-superuser `evalforge_app` role with only `SELECT`/`INSERT` grants — the migration/admin role is never used for request-serving queries — so RLS policies actually apply rather than being bypassed by table ownership. See `services/api/src/evalforge_api/adapters/membership_repository.py`.
+- **Frontend**: `apps/web` stores the access token only in an httpOnly cookie (`apps/web/src/lib/actions/auth-actions.ts`), never in browser-readable storage; server-rendered pages revalidate the session against `GET /auth/me` on every request rather than trusting the cookie's presence.
+
+Related documents: [Domain Model](DOMAIN_MODEL.md), [Trust Boundaries](TRUST_BOUNDARIES.md), [Security Baseline](SECURITY_BASELINE.md), ADR [0004](adr/0004-tenant-isolation-and-data-ownership.md), and the [Milestone 3 Completion Report](MILESTONE_3_COMPLETION_REPORT.md).

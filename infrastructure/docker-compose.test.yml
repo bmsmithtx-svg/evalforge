@@ -1,0 +1,23 @@
+# Ephemeral PostgreSQL for the api test suite only. Separate from the
+# docker-compose.yml local-development stack so `make test` never reads
+# or writes development data. Credentials below are synthetic,
+# local-only defaults — never used outside a developer's or CI
+# machine and never valid against any real environment.
+name: evalforge-test
+
+services:
+  postgres-test:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: evalforge
+      POSTGRES_PASSWORD: evalforge-test
+      POSTGRES_DB: evalforge_test
+    ports:
+      - "55432:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evalforge -d evalforge_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30

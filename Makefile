@@ -1,7 +1,7 @@
 .PHONY: validate api-venv web-install lint typecheck test \
         modularity-check forbidden-filenames-check link-check \
         dependency-boundary-check circular-import-check secret-scan \
-        up down
+        up down test-services-up test-services-down
 
 ROOT := $(CURDIR)
 API_DIR := services/api
@@ -29,7 +29,13 @@ typecheck: api-venv web-install
 	cd $(API_DIR) && $(VENV_BIN)/mypy src
 	cd $(WEB_DIR) && npm run typecheck
 
-test: api-venv web-install
+test-services-up:
+	cd infrastructure && docker compose -f docker-compose.test.yml up -d --wait
+
+test-services-down:
+	cd infrastructure && docker compose -f docker-compose.test.yml down
+
+test: api-venv web-install test-services-up
 	cd $(API_DIR) && $(VENV_BIN)/pytest
 	cd $(WEB_DIR) && npm test
 

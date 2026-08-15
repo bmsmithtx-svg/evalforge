@@ -32,8 +32,31 @@ export class ApiClientError extends Error {
   }
 }
 
-async function requestJson<T>(path: string, baseUrl: string): Promise<T> {
-  const response = await fetch(`${baseUrl}${path}`, { cache: "no-store" });
+export interface RequestOptions {
+  method?: string;
+  body?: unknown;
+  accessToken?: string;
+}
+
+export async function requestJson<T>(
+  path: string,
+  baseUrl: string,
+  options: RequestOptions = {},
+): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (options.body !== undefined) {
+    headers["Content-Type"] = "application/json";
+  }
+  if (options.accessToken) {
+    headers["Authorization"] = `Bearer ${options.accessToken}`;
+  }
+
+  const response = await fetch(`${baseUrl}${path}`, {
+    method: options.method ?? "GET",
+    headers,
+    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    cache: "no-store",
+  });
   if (!response.ok) {
     throw new ApiClientError(path, response.status);
   }

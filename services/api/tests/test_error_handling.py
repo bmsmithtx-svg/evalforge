@@ -34,6 +34,24 @@ def test_unhandled_exception_returns_standard_envelope_without_leaking_detail(
     assert "sensitive internal detail" not in response.text
 
 
+def test_validation_error_from_a_custom_validator_serializes_safely(
+    test_settings: Settings,
+) -> None:
+    """Regression test: a field_validator raising ValueError used to
+    crash response rendering because RequestValidationError.errors()
+    embeds the raw exception under ctx.error, which plain json.dumps
+    cannot serialize."""
+    passphrase = "irrelevant-registration-value"
+
+    with TestClient(create_app(settings=test_settings)) as client:
+        response = client.post(
+            "/auth/register", json={"email": "not-an-email", "password": passphrase}
+        )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation_error"
+
+
 def test_explicit_http_exception_uses_standard_envelope(test_settings: Settings) -> None:
     app = create_app(settings=test_settings)
 
