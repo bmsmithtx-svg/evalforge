@@ -15,7 +15,13 @@ from fastapi.testclient import TestClient
 
 from evalforge_api.adapters.postgres_pool import create_pool
 from evalforge_api.app import create_app
-from evalforge_api.dependency_wiring import build_identity_repositories
+from evalforge_api.dependency_wiring import (
+    build_evaluation_repositories,
+    build_identity_repositories,
+)
+from evalforge_api.domain.enums import MembershipStatus, TenantRole
+from evalforge_api.domain.tenant_context import TenantContext
+from evalforge_api.ports.evaluation_repositories import EvaluationRepositories
 from evalforge_api.ports.identity import IdentityRepositories
 from evalforge_api.settings import Settings
 
@@ -105,6 +111,15 @@ async def identity_repositories(test_settings: Settings) -> AsyncIterator[Identi
     await pool.close()
 
 
+@pytest_asyncio.fixture
+async def evaluation_repositories(
+    test_settings: Settings,
+) -> AsyncIterator[EvaluationRepositories]:
+    pool = await create_pool(str(test_settings.app_database_url))
+    yield build_evaluation_repositories(pool, test_settings)
+    await pool.close()
+
+
 @pytest.fixture
 def api_client(test_settings: Settings) -> Iterator[TestClient]:
     with TestClient(create_app(settings=test_settings)) as client:
@@ -125,6 +140,54 @@ def create_tenant(test_settings: Settings) -> Callable[..., Awaitable[UUID]]:
         try:
             row = await connection.fetchrow(
                 "INSERT INTO tenants (slug, name) VALUES ($1, $2) RETURNING id", slug, name
+            )
+        finally:
+            await connection.close()
+        assert row is not None
+        return UUID(str(row["id"]))
+
+    return _create
+
+
+@pytest.fixture
+def build_tenant_context() -> Callable[..., TenantContext]:
+    """Build a ``TenantContext`` directly for Milestone 4 tests.
+
+    Authorization for evaluation-domain actions depends only on
+    ``context.role``, not on a live membership-repository lookup, so
+    tests may construct the context directly rather than going through
+    the membership repository — matching how ``get_tenant_context``
+    (security/dependencies.py) builds one after independently
+    verifying membership in the real request path.
+    """
+
+    def _build(
+        *, tenant_id: UUID, user_id: UUID, role: TenantRole, tenant_slug: str = "test-tenant"
+    ) -> TenantContext:
+        return TenantContext(
+            tenant_id=tenant_id,
+            tenant_slug=tenant_slug,
+            user_id=user_id,
+            role=role,
+            membership_status=MembershipStatus.ACTIVE,
+        )
+
+    return _build
+
+
+@pytest.fixture
+def create_user(test_settings: Settings) -> Callable[..., Awaitable[UUID]]:
+    """Create a user directly via the administrative DSN, bypassing
+    registration — Milestone 4 fixtures only need a valid actor ID,
+    not a working credential."""
+
+    async def _create(email: str) -> UUID:
+        connection = await asyncpg.connect(dsn=str(test_settings.database_url))
+        try:
+            row = await connection.fetchrow(
+                "INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id",
+                email,
+                "test-fixture-password-hash",  # noqa: S106
             )
         finally:
             await connection.close()

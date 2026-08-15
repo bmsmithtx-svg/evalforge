@@ -9,7 +9,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from evalforge_api.adapters.postgres_pool import create_pool
-from evalforge_api.dependency_wiring import build_connectivity_checks, build_identity_repositories
+from evalforge_api.dependency_wiring import (
+    build_connectivity_checks,
+    build_evaluation_repositories,
+    build_identity_repositories,
+)
 from evalforge_api.error_handling import register_error_handlers
 from evalforge_api.logging_setup import configure_logging, get_logger
 from evalforge_api.middleware.rate_limit import RateLimitMiddleware
@@ -30,6 +34,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         pool = await create_pool(str(settings.app_database_url))
         app.state.db_pool = pool
         app.state.identity_repositories = build_identity_repositories(pool)
+        app.state.evaluation_repositories = build_evaluation_repositories(pool, settings)
         logger.info("evalforge_api_startup", environment=settings.environment)
         yield
         await pool.close()
@@ -37,8 +42,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title="EvalForge API",
-        version="0.3.0",
-        description="EvalForge control/API service — authentication and tenant isolation.",
+        version="0.4.0",
+        description=(
+            "EvalForge control/API service — authentication, tenant isolation, and the "
+            "versioned evaluation domain."
+        ),
         lifespan=lifespan,
     )
 

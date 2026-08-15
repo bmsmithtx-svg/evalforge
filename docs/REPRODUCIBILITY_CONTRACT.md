@@ -2,7 +2,7 @@
 
 ## Status
 
-This document defines what EvalForge must capture in later milestones to reproduce, explain, or compare experiments. It does not implement run execution.
+This document defines what EvalForge must capture in later milestones to reproduce, explain, or compare experiments. Milestone 4 implements the snapshot- and hashing-level foundation described below; see [Implementation Notes (Milestone 4)](#implementation-notes-milestone-4). It does not implement run execution — the "Required Capture For Experiments" list below remains conceptual until Milestone 7.
 
 ## Required Capture For Experiments
 
@@ -60,5 +60,12 @@ Experiment reports and gate evidence must state:
 - Which captured versions and hashes define the run.
 - Which external dependencies may have changed.
 - Whether model-judge outputs or human reviews influenced the decision.
+
+## Implementation Notes (Milestone 4)
+
+- **Snapshot and hashing requirements**: implemented for dataset snapshots. `evalforge_api.domain.hashing` canonicalizes JSON-compatible content (recursively sorted keys, fixed separators, ASCII-escaped) before hashing with SHA-256, so incidental serialization differences (key order, whitespace) never change a hash while any evaluation-significant content change does. `evalforge_api.application.snapshot_service.finalize_snapshot` computes the snapshot hash over the frozen `(test_case_id, test_case_version_id, version_number, content_hash)` membership list and persists it alongside the hash algorithm and canonicalization-version tag.
+- **Immutable completed runs**: not yet applicable — no run concept exists until Milestone 7. What Milestone 4 does make immutable now: dataset snapshots after finalization (database trigger, see [Domain Model](DOMAIN_MODEL.md#implementation-notes-milestone-4)) and every versioned-resource, test-case, and artifact version row (no `UPDATE` or `DELETE` privilege grant on those tables for the request-serving role).
+- **Reruns and comparisons**: not yet applicable — experiments and runs do not exist until Milestone 7.
+- **Required disclosure**: not yet applicable to a user-facing report — no experiment report exists yet. The underlying evidence it will draw on (hash algorithm, canonicalization version, snapshot finalization timestamp and actor) is already recorded on every relevant row.
 
 Related documents: [Domain Model](DOMAIN_MODEL.md), [Metric Definitions](METRIC_DEFINITIONS.md), and ADR [0002](adr/0002-versioned-artifacts-and-immutable-run-snapshots.md).

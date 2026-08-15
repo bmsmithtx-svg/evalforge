@@ -14,14 +14,20 @@ from evalforge_api.settings import Settings
 CreateTenant = Callable[..., Awaitable[UUID]]
 
 
-async def test_migration_head_revision_is_applied(test_settings: Settings) -> None:
+async def test_identity_and_tenancy_migration_is_applied(test_settings: Settings) -> None:
+    """The identity/tenancy migration (0002) is present somewhere in
+    the applied chain; the overall head revision is pinned by
+    ``test_evaluation_migration.py`` alongside the later evaluation-
+    domain migrations this repository's tables also depend on."""
     connection = await asyncpg.connect(dsn=str(test_settings.database_url))
     try:
-        row = await connection.fetchrow("SELECT version_num FROM alembic_version")
+        row = await connection.fetchrow(
+            "SELECT to_regclass('public.tenant_memberships') IS NOT NULL AS applied"
+        )
     finally:
         await connection.close()
     assert row is not None
-    assert row["version_num"] == "0002_identity_and_tenancy"
+    assert row["applied"] is True
 
 
 async def test_creating_membership_for_unknown_user_fails_with_foreign_key_violation(

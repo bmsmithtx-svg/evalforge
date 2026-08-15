@@ -1,8 +1,9 @@
-# Ephemeral PostgreSQL for the api test suite only. Separate from the
-# docker-compose.yml local-development stack so `make test` never reads
-# or writes development data. Credentials below are synthetic,
-# local-only defaults — never used outside a developer's or CI
-# machine and never valid against any real environment.
+# Ephemeral PostgreSQL and object storage for the api test suite only.
+# Separate from the docker-compose.yml local-development stack so
+# `make test` never reads or writes development data. Credentials
+# below are synthetic, local-only defaults — never used outside a
+# developer's or CI machine and never valid against any real
+# environment.
 name: evalforge-test
 
 services:
@@ -21,3 +22,31 @@ services:
       interval: 2s
       timeout: 3s
       retries: 30
+
+  object-storage-test:
+    image: minio/minio:latest
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: test-access-key
+      MINIO_ROOT_PASSWORD: test-secret-key
+    ports:
+      - "9100:9000"
+    tmpfs:
+      - /data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  object-storage-test-init:
+    image: minio/mc:latest
+    depends_on:
+      object-storage-test:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://object-storage-test:9000 test-access-key test-secret-key &&
+      mc mb --ignore-existing local/evalforge-test
+      "
+    restart: "no"

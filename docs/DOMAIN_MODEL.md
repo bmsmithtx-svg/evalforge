@@ -2,7 +2,7 @@
 
 ## Status
 
-This document defines conceptual EvalForge entities for later implementation. It does not create schemas, ORM models, migrations, or database configuration.
+This document defines conceptual EvalForge entities for later implementation. Milestone 4 implements the persistence layer for the entities marked below; see [Implementation Notes (Milestone 4)](#implementation-notes-milestone-4) for how each concept maps to running schema and code. Entities not listed there (experiment, variant, run, attempt, trace, span, evaluation result, metric observation, human review, adjudication, comparison, regression finding, quality gate) remain conceptual until their assigned later milestone.
 
 ## Common Rules
 
@@ -51,5 +51,19 @@ This document defines conceptual EvalForge entities for later implementation. It
 ## Relationship Summary
 
 A tenant contains workspaces or projects. Workspaces contain evaluation targets, datasets, experiments, and quality gates. Datasets contain versioned test cases and immutable snapshots. Experiments compare variants that reference versioned prompts, models, retrieval configurations, tool definitions, workflows, evaluators, and pricing definitions. Runs and attempts produce traces, spans, artifacts, evaluation results, metric observations, comparisons, regression findings, human reviews, adjudications, quality-gate decisions, and audit events.
+
+## Implementation Notes (Milestone 4)
+
+- **Workspace or project**: `workspaces` table (migration `20260815_0003_eval_domain_resources.py`), tenant-scoped, `UNIQUE (tenant_id, slug)`. Workspace-scoped authorization does not exist yet (see [Tenancy and Authorization](TENANCY_AND_AUTHORIZATION.md)), so creation is a tenant-level action (`TenantAction.CREATE_WORKSPACE`, `tenant_admin` only) — the standard role fills in for the not-yet-implemented workspace-administrator role.
+- **Evaluation target**: `evaluation_targets` table, tenant- and workspace-scoped via a composite `(workspace_id, tenant_id)` foreign key.
+- **Model version, prompt version, retrieval configuration version, tool definition version, workflow version, evaluator version, pricing version**: these seven concepts share identical versioning mechanics (stable logical resource, immutable content-hashed versions, explicit derivation lineage) and differ only in the JSON shape of their content, so Milestone 4 represents them uniformly as `versioned_resources` (logical identity) and `versioned_resource_versions` (immutable version identity) tables, discriminated by `evalforge_api.domain.evaluation_enums.ResourceKind`. This is a persistence-layer modeling choice, not a change to the underlying domain concepts — each kind keeps its own name and content shape at the domain and application layers (`evalforge_api.application.versioned_resource_service`).
+- **Dataset**: `datasets` table, tenant- and workspace-scoped.
+- **Test case**: `test_cases` (logical identity) and `test_case_versions` (immutable content-hashed versions) tables. "Editable before snapshot" is implemented as always creating a new version — no supported path rewrites an existing version's content.
+- **Dataset version or immutable snapshot**: `dataset_snapshots` (identity, status, content hash) and `dataset_snapshot_items` (frozen membership, one row per included test-case version with an explicit `sequence_index` for deterministic ordering) tables. A `BEFORE INSERT` trigger on `dataset_snapshot_items` rejects membership changes once the parent snapshot's status is no longer `draft` and rejects a test-case version that does not belong to the snapshot's own dataset; a `BEFORE UPDATE` trigger on `dataset_snapshots` rejects any further change once `status = 'finalized'`. The snapshot content hash covers the frozen `(test_case_id, test_case_version_id, version_number, content_hash)` membership list, so it changes if and only if frozen content changes.
+- **Artifact**: `artifacts` (logical identity and metadata) and `artifact_versions` (immutable content hash, byte size, content type, and tenant-scoped object-storage key) tables. Bytes are stored via `evalforge_api.adapters.artifact_object_storage.S3ArtifactObjectStorage`; PostgreSQL never stores artifact bytes directly.
+- **Identity and version identity**: every versioned table separates a logical-resource row (stable UUID) from version rows (separate stable UUID plus a per-resource sequential `version_number`); no supported application or database path updates an existing version row's content.
+- **Lineage**: represented with explicit relational references, not opaque JSON — composite `(id, tenant_id)` foreign keys throughout (see [Tenancy and Authorization](TENANCY_AND_AUTHORIZATION.md)) make a cross-tenant lineage reference impossible to insert, and self-referential `derived_from_version_id` / `derived_from_artifact_version_id` columns record explicit derivation chains within one logical resource or artifact (`evalforge_api.application.lineage_service`).
+- **Hashing**: SHA-256 over canonicalized JSON (`evalforge_api.domain.hashing`, sorted keys, fixed separators, ASCII-escaped) for structured content, and SHA-256 over raw bytes for artifacts. The algorithm and a canonicalization-version tag are recorded alongside every hash.
+- **Retention**: `retention_class` (`standard` / `extended` / `legal_hold`), `retain_until`, and `archived_at` columns exist on every immutable-evidence table; Milestone 4 captures this metadata but does not implement retention or deletion execution (see [Data Governance](DATA_GOVERNANCE.md)).
 
 Related documents: [Reproducibility Contract](REPRODUCIBILITY_CONTRACT.md), [Tenancy and Authorization](TENANCY_AND_AUTHORIZATION.md), and [Metric Definitions](METRIC_DEFINITIONS.md).

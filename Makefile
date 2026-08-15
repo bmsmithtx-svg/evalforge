@@ -30,7 +30,8 @@ typecheck: api-venv web-install
 	cd $(WEB_DIR) && npm run typecheck
 
 test-services-up:
-	cd infrastructure && docker compose -f docker-compose.test.yml up -d --wait
+	cd infrastructure && docker compose -f docker-compose.test.yml up -d --wait postgres-test object-storage-test
+	cd infrastructure && docker compose -f docker-compose.test.yml run --rm object-storage-test-init
 
 test-services-down:
 	cd infrastructure && docker compose -f docker-compose.test.yml down
