@@ -21,6 +21,7 @@ dependencies = [
   "psycopg[binary]>=3.2,<4.0",
   "pyjwt>=2.9,<3.0",
   "bcrypt>=4.2,<5.0",
+  "python-multipart>=0.0.12,<1.0",
 ]
 
 [project.optional-dependencies]
@@ -53,7 +54,13 @@ ignore = ["S101"]
 # FastAPI's dependency-injection markers are meant to appear as
 # argument defaults; this is the framework's documented pattern, not
 # the accidental-mutable-default bug B008 otherwise catches.
-extend-immutable-calls = ["fastapi.Depends", "fastapi.Path", "fastapi.Query"]
+extend-immutable-calls = [
+  "fastapi.Depends",
+  "fastapi.Path",
+  "fastapi.Query",
+  "fastapi.File",
+  "fastapi.Form",
+]
 
 [tool.mypy]
 python_version = "3.13"

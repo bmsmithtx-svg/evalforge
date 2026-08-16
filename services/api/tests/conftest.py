@@ -18,11 +18,13 @@ from evalforge_api.app import create_app
 from evalforge_api.dependency_wiring import (
     build_evaluation_repositories,
     build_identity_repositories,
+    build_ingestion_repositories,
 )
 from evalforge_api.domain.enums import MembershipStatus, TenantRole
 from evalforge_api.domain.tenant_context import TenantContext
 from evalforge_api.ports.evaluation_repositories import EvaluationRepositories
 from evalforge_api.ports.identity import IdentityRepositories
+from evalforge_api.ports.ingestion_repositories import IngestionRepositories
 from evalforge_api.settings import Settings
 
 API_DIR = Path(__file__).resolve().parents[1]
@@ -117,6 +119,15 @@ async def evaluation_repositories(
 ) -> AsyncIterator[EvaluationRepositories]:
     pool = await create_pool(str(test_settings.app_database_url))
     yield build_evaluation_repositories(pool, test_settings)
+    await pool.close()
+
+
+@pytest_asyncio.fixture
+async def ingestion_repositories(
+    test_settings: Settings,
+) -> AsyncIterator[IngestionRepositories]:
+    pool = await create_pool(str(test_settings.app_database_url))
+    yield build_ingestion_repositories(pool)
     await pool.close()
 
 

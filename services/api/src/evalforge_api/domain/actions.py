@@ -31,6 +31,12 @@ class TenantAction(StrEnum):
     CREATE_ARTIFACT = "create_artifact"
     VIEW_ARTIFACT = "view_artifact"
 
+    # Milestone 5: SDK, API, trace, and run ingestion.
+    INGEST_RUN = "ingest_run"
+    VIEW_RUN = "view_run"
+    INGEST_TRACE = "ingest_trace"
+    VIEW_TRACE = "view_trace"
+
 
 # Milestone 4 read-only actions every membership role may perform: a
 # reviewer or read-only observer needs to see evidence (targets,
@@ -45,17 +51,22 @@ _EVALUATION_DOMAIN_VIEW_ACTIONS: frozenset[TenantAction] = frozenset(
         TenantAction.VIEW_DATASET,
         TenantAction.VIEW_DATASET_SNAPSHOT,
         TenantAction.VIEW_ARTIFACT,
+        TenantAction.VIEW_RUN,
+        TenantAction.VIEW_TRACE,
     }
 )
 
-# "Manages target configurations" (docs/TENANCY_AND_AUTHORIZATION.md):
-# developer owns evaluation targets and the versioned model, prompt,
-# retrieval, tool, and workflow configuration attached to them.
+# "Manages target configurations" and "submits runs and traces"
+# (docs/TENANCY_AND_AUTHORIZATION.md): developer owns evaluation
+# targets, the versioned model/prompt/retrieval/tool/workflow
+# configuration attached to them, and ingested execution evidence.
 _DEVELOPER_MUTATIONS: frozenset[TenantAction] = frozenset(
     {
         TenantAction.CREATE_EVALUATION_TARGET,
         TenantAction.CREATE_VERSIONED_RESOURCE,
         TenantAction.CREATE_ARTIFACT,
+        TenantAction.INGEST_RUN,
+        TenantAction.INGEST_TRACE,
     }
 )
 

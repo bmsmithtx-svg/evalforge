@@ -50,6 +50,22 @@ jobs:
       - run: mypy src
       - run: pytest
 
+  sdk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/evalforge-sdk
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -e ".[dev]"
+      - run: ruff check src tests
+      - run: ruff format --check src tests
+      - run: mypy src
+      - run: pytest
+
   web:
     runs-on: ubuntu-latest
     defaults:
@@ -89,10 +105,15 @@ jobs:
         run: |
           pip install -e ".[dev]" pip-audit
           pip-audit --strict --skip-editable
+      - name: pip install and vulnerability check (sdk)
+        working-directory: packages/evalforge-sdk
+        run: |
+          pip install -e ".[dev]" pip-audit
+          pip-audit --strict --skip-editable
 
   local-stack-integration:
     runs-on: ubuntu-latest
-    needs: [foundation-checks, api, web]
+    needs: [foundation-checks, api, sdk, web]
     steps:
       - uses: actions/checkout@v4
       - name: Start local development stack

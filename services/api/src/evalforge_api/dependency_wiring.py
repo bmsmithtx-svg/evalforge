@@ -13,11 +13,17 @@ from evalforge_api.adapters.artifact_object_storage import S3ArtifactObjectStora
 from evalforge_api.adapters.artifact_repository import PostgresArtifactRepository
 from evalforge_api.adapters.dataset_repository import PostgresDatasetRepository
 from evalforge_api.adapters.dataset_snapshot_repository import PostgresDatasetSnapshotRepository
+from evalforge_api.adapters.evidence_artifact_repository import (
+    PostgresEvidenceArtifactRepository,
+)
 from evalforge_api.adapters.membership_repository import PostgresMembershipRepository
 from evalforge_api.adapters.object_storage import ObjectStorageConnectivityCheck
 from evalforge_api.adapters.postgres import PostgresConnectivityCheck
 from evalforge_api.adapters.redis_cache import RedisConnectivityCheck
+from evalforge_api.adapters.run_repository import PostgresRunRepository
+from evalforge_api.adapters.span_repository import PostgresSpanRepository
 from evalforge_api.adapters.tenant_repository import PostgresTenantRepository
+from evalforge_api.adapters.trace_repository import PostgresTraceRepository
 from evalforge_api.adapters.user_repository import PostgresUserRepository
 from evalforge_api.adapters.versioned_resource_repository import (
     PostgresVersionedResourceRepository,
@@ -29,6 +35,7 @@ from evalforge_api.adapters.workspace_repository import (
 from evalforge_api.ports.connectivity import ConnectivityCheck
 from evalforge_api.ports.evaluation_repositories import EvaluationRepositories
 from evalforge_api.ports.identity import IdentityRepositories
+from evalforge_api.ports.ingestion_repositories import IngestionRepositories
 from evalforge_api.settings import Settings
 
 
@@ -55,6 +62,15 @@ def build_evaluation_repositories(pool: asyncpg.Pool, settings: Settings) -> Eva
             bucket=settings.object_storage_bucket,
             region=settings.object_storage_region,
         ),
+    )
+
+
+def build_ingestion_repositories(pool: asyncpg.Pool) -> IngestionRepositories:
+    return IngestionRepositories(
+        runs=PostgresRunRepository(pool),
+        traces=PostgresTraceRepository(pool),
+        spans=PostgresSpanRepository(pool),
+        evidence_artifacts=PostgresEvidenceArtifactRepository(pool),
     )
 
 

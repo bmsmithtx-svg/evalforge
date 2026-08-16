@@ -13,12 +13,22 @@ from evalforge_api.dependency_wiring import (
     build_connectivity_checks,
     build_evaluation_repositories,
     build_identity_repositories,
+    build_ingestion_repositories,
 )
 from evalforge_api.error_handling import register_error_handlers
 from evalforge_api.logging_setup import configure_logging, get_logger
 from evalforge_api.middleware.rate_limit import RateLimitMiddleware
 from evalforge_api.middleware.request_size_limit import RequestSizeLimitMiddleware
-from evalforge_api.routes import auth, health, readiness, tenants
+from evalforge_api.routes import (
+    auth,
+    health,
+    ingestion_artifacts,
+    ingestion_runs,
+    ingestion_spans,
+    ingestion_traces,
+    readiness,
+    tenants,
+)
 from evalforge_api.settings import Settings, get_settings
 
 
@@ -35,6 +45,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.db_pool = pool
         app.state.identity_repositories = build_identity_repositories(pool)
         app.state.evaluation_repositories = build_evaluation_repositories(pool, settings)
+        app.state.ingestion_repositories = build_ingestion_repositories(pool)
         logger.info("evalforge_api_startup", environment=settings.environment)
         yield
         await pool.close()
@@ -42,10 +53,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title="EvalForge API",
-        version="0.4.0",
+        version="0.5.0",
         description=(
-            "EvalForge control/API service — authentication, tenant isolation, and the "
-            "versioned evaluation domain."
+            "EvalForge control/API service — authentication, tenant isolation, the versioned "
+            "evaluation domain, and SDK/API run, trace, and artifact ingestion."
         ),
         lifespan=lifespan,
     )
@@ -59,6 +70,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(
         RequestSizeLimitMiddleware,
         max_body_bytes=settings.max_request_body_bytes,
+        path_suffix_overrides={"/artifacts": settings.max_artifact_bytes},
     )
     if settings.cors_allowed_origins:
         app.add_middleware(
@@ -82,5 +94,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(readiness.router)
     app.include_router(auth.router)
     app.include_router(tenants.router)
+    app.include_router(ingestion_runs.router)
+    app.include_router(ingestion_traces.router)
+    app.include_router(ingestion_spans.router)
+    app.include_router(ingestion_artifacts.router)
 
     return app

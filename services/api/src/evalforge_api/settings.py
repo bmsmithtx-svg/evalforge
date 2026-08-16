@@ -66,6 +66,12 @@ class Settings(BaseSettings):
     rate_limit_requests_per_window: int = Field(default=60, gt=0)
     rate_limit_window_seconds: float = Field(default=60.0, gt=0)
 
+    # Milestone 5 ingestion boundary. Larger than max_request_body_bytes
+    # because artifact uploads are multipart file bodies, not JSON
+    # command payloads — see docs/MILESTONE_4_COMPLETION_REPORT.md's
+    # residual-risk note that a future ingestion API must add this.
+    max_artifact_bytes: int = Field(default=25_000_000, gt=0)
+
     readiness_timeout_seconds: float = Field(default=2.0, gt=0)
 
     jwt_signing_key: str = Field(min_length=32)

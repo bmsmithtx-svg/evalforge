@@ -9,23 +9,40 @@ from starlette.status import HTTP_413_CONTENT_TOO_LARGE
 
 
 class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app: object, *, max_body_bytes: int) -> None:
+    def __init__(
+        self,
+        app: object,
+        *,
+        max_body_bytes: int,
+        path_suffix_overrides: dict[str, int] | None = None,
+    ) -> None:
         super().__init__(app)  # type: ignore[arg-type]
         self._max_body_bytes = max_body_bytes
+        # Milestone 5: multipart artifact uploads need a larger ceiling
+        # than JSON command payloads without loosening the default for
+        # every other endpoint (docs/SECURITY_BASELINE.md).
+        self._path_suffix_overrides = path_suffix_overrides or {}
+
+    def _limit_for(self, path: str) -> int:
+        for suffix, limit in self._path_suffix_overrides.items():
+            if path.endswith(suffix):
+                return limit
+        return self._max_body_bytes
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        limit = self._limit_for(request.url.path)
         content_length = request.headers.get("content-length")
         if content_length is not None:
             try:
                 declared_bytes = int(content_length)
             except ValueError:
                 declared_bytes = None
-            if declared_bytes is not None and declared_bytes > self._max_body_bytes:
-                return _too_large_response(self._max_body_bytes)
+            if declared_bytes is not None and declared_bytes > limit:
+                return _too_large_response(limit)
 
         body = await request.body()
-        if len(body) > self._max_body_bytes:
-            return _too_large_response(self._max_body_bytes)
+        if len(body) > limit:
+            return _too_large_response(limit)
 
         return await call_next(request)
 

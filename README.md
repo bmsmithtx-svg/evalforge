@@ -16,7 +16,7 @@ Phase 1 is planned to establish:
 - Comparison, regression, quality-gate, review, import, export, and failure-analysis workflows.
 - Authentication, tenant isolation, audit history, and security controls in later milestones.
 
-EvalForge is not yet a product with evaluation functionality. This repository currently contains the Milestone 0 workspace skeleton, the Milestone 1 product/architecture/governance contracts, the Milestone 2 engineering and infrastructure foundation, the Milestone 3 authentication, authorization, and tenant-isolation security boundary, and the Milestone 4 versioned evaluation domain and persistence layer. No experiment execution, trace ingestion, evaluators, or dashboards exist yet — that begins in Milestone 5 and later.
+EvalForge is not yet a product with evaluation functionality. This repository currently contains the Milestone 0 workspace skeleton, the Milestone 1 product/architecture/governance contracts, the Milestone 2 engineering and infrastructure foundation, the Milestone 3 authentication, authorization, and tenant-isolation security boundary, the Milestone 4 versioned evaluation domain and persistence layer, and the Milestone 5 SDK, API, trace, and run ingestion boundary. No experiment execution, evaluators, or dashboards exist yet — that begins in Milestone 6 and later.
 
 ## Current Status
 
@@ -24,8 +24,9 @@ EvalForge is not yet a product with evaluation functionality. This repository cu
 - Milestone 1 — Product Charter, Architecture, Governance, and Threat Model: approved.
 - Milestone 2 — Engineering and Infrastructure Foundation: approved.
 - Milestone 3 — Authentication, Authorization, and Tenant Isolation: approved.
-- Milestone 4 — Versioned Evaluation Domain and Persistence: implemented and validated, pending owner review.
-- Milestones 5–15: not started.
+- Milestone 4 — Versioned Evaluation Domain and Persistence: approved.
+- Milestone 5 — SDK, API, Trace, and Run Ingestion: implemented and validated, pending owner review.
+- Milestones 6–15: not started.
 
 Later milestones must follow the locked roadmap sequentially. No later-milestone functionality may be preimplemented before that milestone is authorized.
 
@@ -34,6 +35,8 @@ The Milestone 1 documentation records the locked Phase 1 engineering foundation:
 Milestone 3 implements the security boundary described in [Tenancy and Authorization](docs/TENANCY_AND_AUTHORIZATION.md): self-issued, server-verified JWT bearer authentication (`services/api/src/evalforge_api/security/`); a `users` / `tenants` / `tenant_memberships` identity and tenancy schema with a least-privilege `evalforge_app` database role and PostgreSQL row-level security on `tenant_memberships` (`services/api/alembic/versions/20260815_0002_identity_and_tenancy.py`); a centralized, deny-by-default authorization policy keyed on the fixed Milestone 1 tenant-role set (`services/api/src/evalforge_api/domain/`); `/auth/register`, `/auth/login`, `/auth/me`, `/tenants`, `/tenants/{tenant_id}/context`, and `/tenants/{tenant_id}/members` endpoints; and a minimal Next.js login flow that stores the access token only in an httpOnly cookie and never exposes it to browser JavaScript. See [Milestone 3 Completion Report](docs/MILESTONE_3_COMPLETION_REPORT.md) for verification evidence.
 
 Milestone 4 implements the persistence substrate described in [Domain Model](docs/DOMAIN_MODEL.md) and [Reproducibility Contract](docs/REPRODUCIBILITY_CONTRACT.md): tenant-scoped workspaces and evaluation targets; a unified versioned-resource mechanism covering model, prompt, retrieval, tool, workflow, evaluator, and pricing versions; versioned test cases and immutable, hash-verified dataset snapshots; artifact metadata with tenant-scoped S3-compatible object storage; and explicit relational lineage throughout (`services/api/src/evalforge_api/domain/`, `ports/`, `adapters/`, `application/`; migrations `services/api/alembic/versions/20260815_0003_*` through `0005_*`). Every new table carries PostgreSQL row-level security and composite tenant-consistent foreign keys, and finalized snapshots and version rows are immutable by database trigger and privilege grant, not application convention alone. No new public API routes were added — Milestone 4 is proved through internal application services and tests, per the milestone's own scope guidance. See [Milestone 4 Completion Report](docs/MILESTONE_4_COMPLETION_REPORT.md) for verification evidence.
+
+Milestone 5 implements the controlled ingestion boundary described in this document's roadmap entry: authenticated, tenant-isolated public APIs for runs, canonical traces and spans, and artifact evidence (`services/api/src/evalforge_api/routes/ingestion_*.py`, `application/{run,trace,span,evidence_artifact,artifact_ingestion}_service.py`; migrations `services/api/alembic/versions/20260815_0006_*` through `0008_*`), a Python SDK (`packages/evalforge-sdk`), and durable, database-enforced idempotency for every ingestion write. Runs and traces are immutable once finalized, spans may only be appended while their trace is still accepting evidence, and every optional lineage or artifact reference is independently re-verified against the requesting tenant before being persisted. See [Milestone 5 Completion Report](docs/MILESTONE_5_COMPLETION_REPORT.md) for verification evidence.
 
 ## Local Development
 
@@ -55,6 +58,8 @@ cd infrastructure && docker compose exec api python3 -m evalforge_api.dev_seed
 ```
 
 Then sign in at `http://localhost:3000/login` with one of the printed accounts, or call the API directly: `POST /auth/register`, `POST /auth/login`, `GET /auth/me`, `GET /tenants`, `GET /tenants/{tenant_id}/context`, `GET /tenants/{tenant_id}/members`. See [Tenancy and Authorization](docs/TENANCY_AND_AUTHORIZATION.md) for the identity, role, and isolation model, and `services/api/tests/test_tenant_isolation.py` for cross-tenant-denial examples.
+
+With that bearer token, ingest execution evidence: `POST /tenants/{tenant_id}/runs`, `POST /tenants/{tenant_id}/traces`, `POST /tenants/{tenant_id}/traces/{trace_id}/spans`, and `POST /tenants/{tenant_id}/artifacts` (multipart upload) each require an `Idempotency-Key` header. The Python SDK (`packages/evalforge-sdk`) wraps these calls — see [Milestone 5 Completion Report](docs/MILESTONE_5_COMPLETION_REPORT.md) for the full endpoint list, idempotency semantics, and SDK usage.
 
 `make test` (part of `make validate`) starts a separate, ephemeral test-only PostgreSQL and MinIO via `infrastructure/docker-compose.test.yml` (`make test-services-up` / `make test-services-down` to manage them directly); it never touches the `make up` development database or object storage.
 
@@ -81,4 +86,5 @@ Then sign in at `http://localhost:3000/login` with one of the printed accounts, 
 - [Milestone 2 Completion Report](docs/MILESTONE_2_COMPLETION_REPORT.md)
 - [Milestone 3 Completion Report](docs/MILESTONE_3_COMPLETION_REPORT.md)
 - [Milestone 4 Completion Report](docs/MILESTONE_4_COMPLETION_REPORT.md)
+- [Milestone 5 Completion Report](docs/MILESTONE_5_COMPLETION_REPORT.md)
 - [Architecture Decision Records](docs/adr/README.md)
