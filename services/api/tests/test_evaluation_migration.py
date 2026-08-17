@@ -124,12 +124,16 @@ async def test_app_role_has_no_delete_grant_on_any_evaluation_domain_table(
     assert rows == []
 
 
-async def test_app_role_has_no_update_grant_except_dataset_snapshots(
+async def test_app_role_update_grant_is_limited_to_mutable_metadata_tables(
     test_settings: Settings,
 ) -> None:
-    """Immutable version and item tables (all but ``dataset_snapshots``,
-    which needs UPDATE only for the draft -> finalized transition)
-    grant no UPDATE at all — the only supported write is INSERT."""
+    """Immutable version and item tables grant no UPDATE at all — the
+    only supported write is INSERT. The three exceptions are
+    ``dataset_snapshots`` (UPDATE only for the trigger-guarded
+    draft -> finalized transition) and, from Milestone 6, ``datasets``
+    and ``test_cases``, whose *mutable metadata* (name, description,
+    tags, status, archival) is genuinely editable while their content
+    still lives in append-only ``test_case_versions``."""
     connection = await asyncpg.connect(dsn=str(test_settings.database_url))
     try:
         rows = await connection.fetch(
@@ -143,4 +147,4 @@ async def test_app_role_has_no_update_grant_except_dataset_snapshots(
         )
     finally:
         await connection.close()
-    assert {row["table_name"] for row in rows} == {"dataset_snapshots"}
+    assert {row["table_name"] for row in rows} == {"dataset_snapshots", "datasets", "test_cases"}

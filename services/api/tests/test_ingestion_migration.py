@@ -41,16 +41,20 @@ _EXPECTED_TENANT_CONSISTENT_FOREIGN_KEYS = (
 _TABLES_WITH_UPDATE_GRANT = {"runs", "traces"}
 
 
-async def test_migration_head_revision_is_the_last_ingestion_migration(
-    test_settings: Settings,
-) -> None:
+async def test_the_ingestion_migration_is_applied(test_settings: Settings) -> None:
+    """The last ingestion migration (0008) is present somewhere in the
+    applied chain; the overall head revision is pinned by
+    ``test_dataset_migration.py`` alongside the later Milestone 6
+    dataset-management migration."""
     connection = await asyncpg.connect(dsn=str(test_settings.database_url))
     try:
-        row = await connection.fetchrow("SELECT version_num FROM alembic_version")
+        row = await connection.fetchrow(
+            "SELECT to_regclass('public.idempotency_records') IS NOT NULL AS applied"
+        )
     finally:
         await connection.close()
     assert row is not None
-    assert row["version_num"] == "0008_evidence_idempotency"
+    assert row["applied"] is True
 
 
 async def test_every_ingestion_table_exists(test_settings: Settings) -> None:

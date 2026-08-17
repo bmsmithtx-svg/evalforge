@@ -16,12 +16,12 @@ Date: 2026-08-15.
 - Milestone 2: Approved.
 - Milestone 3: Approved.
 - Milestone 4: Approved (owner approval recorded 2026-08-15, per this milestone's authorization).
-- Milestone 5: Implemented and validated; owner review pending.
+- Milestone 5: Approved (owner approval recorded 2026-08-17).
 - Milestones 6–15: Not started.
 
 ## Owner Approval
 
-Milestone 5 (SDK, API, Trace, and Run Ingestion) was authorized and implemented in this session. It is not yet owner-approved; this report is submitted for owner review. Milestone 6 has not been started.
+Milestone 5 (SDK, API, Trace, and Run Ingestion) was authorized and implemented in this session. The owner approved Milestone 5 on 2026-08-17. Milestone 6 (Dataset and Test-Case Management) has been authorized separately.
 
 ## Scope Implemented
 

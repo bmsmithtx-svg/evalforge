@@ -1,48 +1,88 @@
-"""Dataset and test-case authoring use cases."""
+"""Dataset authoring and lifecycle use cases.
+
+A dataset is the mutable container; its *evidence* — versioned
+test-case content and finalized snapshots — is immutable and lives
+elsewhere. So this module is the one place in the dataset aggregate
+that issues genuine updates, and every one of them is authorized and
+audited.
+
+Test-case authoring lives in
+``evalforge_api.application.test_case_service``; ``create_test_case``
+and ``create_test_case_version`` are re-exported here because they are
+part of the same dataset-authoring vocabulary and were introduced at
+this import path in Milestone 4.
+"""
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
+from evalforge_api.application.dataset_errors import (
+    AuthorizationDeniedError,
+    DatasetNotFoundError,
+    TestCaseNotFoundError,
+)
+from evalforge_api.application.test_case_service import (
+    create_test_case,
+    create_test_case_version,
+)
 from evalforge_api.audit import emit_audit_event
 from evalforge_api.domain.actions import TenantAction
-from evalforge_api.domain.hashing import (
-    CANONICALIZATION_VERSION,
-    HASH_ALGORITHM,
-    hash_canonical_content,
-)
+from evalforge_api.domain.evaluation_enums import DatasetStatus
 from evalforge_api.domain.tenant_context import TenantContext
-from evalforge_api.domain.versioning import next_version_number
-from evalforge_api.ports.datasets import DatasetRecord, TestCaseRecord, TestCaseVersionRecord
+from evalforge_api.ports.datasets import DatasetRecord
 from evalforge_api.ports.evaluation_repositories import EvaluationRepositories
 
+__all__ = [
+    "AuthorizationDeniedError",
+    "DatasetNotFoundError",
+    "TestCaseNotFoundError",
+    "archive_dataset",
+    "create_dataset",
+    "create_test_case",
+    "create_test_case_version",
+    "get_dataset",
+    "list_datasets",
+    "update_dataset",
+]
 
-class AuthorizationDeniedError(Exception):
-    pass
 
-
-class TestCaseNotFoundError(Exception):
-    pass
+def _deny(event: str, context: TenantContext, message: str) -> None:
+    emit_audit_event(
+        event=event,
+        outcome="denied",
+        actor_user_id=str(context.user_id),
+        tenant_id=str(context.tenant_id),
+        role=context.role.value,
+    )
+    raise AuthorizationDeniedError(message)
 
 
 async def create_dataset(
-    *, context: TenantContext, workspace_id: UUID, name: str, repositories: EvaluationRepositories
+    *,
+    context: TenantContext,
+    workspace_id: UUID,
+    name: str,
+    repositories: EvaluationRepositories,
+    description: str | None = None,
+    tags: Sequence[str] = (),
+    metadata: dict[str, Any] | None = None,
 ) -> DatasetRecord:
     if not context.can(TenantAction.CREATE_DATASET):
-        emit_audit_event(
-            event="dataset_creation",
-            outcome="denied",
-            actor_user_id=str(context.user_id),
-            tenant_id=str(context.tenant_id),
-            role=context.role.value,
-        )
-        raise AuthorizationDeniedError("Not authorized to create a dataset.")
+        _deny("dataset_creation", context, "Not authorized to create a dataset.")
 
     dataset = await repositories.datasets.create_dataset(
         tenant_id=context.tenant_id,
         workspace_id=workspace_id,
         name=name,
+        description=description,
+        tags=tuple(tags),
+        metadata=metadata or {},
+        source="manual",
+        cloned_from_dataset_id=None,
+        cloned_from_snapshot_id=None,
         created_by=context.user_id,
     )
     emit_audit_event(
@@ -55,91 +95,99 @@ async def create_dataset(
     return dataset
 
 
-async def create_test_case(
+async def get_dataset(
+    *, context: TenantContext, dataset_id: UUID, repositories: EvaluationRepositories
+) -> DatasetRecord:
+    if not context.can(TenantAction.VIEW_DATASET):
+        raise AuthorizationDeniedError("Not authorized to view this dataset.")
+    dataset = await repositories.datasets.get_dataset(
+        tenant_id=context.tenant_id, dataset_id=dataset_id
+    )
+    if dataset is None:
+        raise DatasetNotFoundError(str(dataset_id))
+    return dataset
+
+
+async def list_datasets(
+    *,
+    context: TenantContext,
+    repositories: EvaluationRepositories,
+    workspace_id: UUID | None = None,
+    status: DatasetStatus | None = None,
+) -> tuple[DatasetRecord, ...]:
+    if not context.can(TenantAction.VIEW_DATASET):
+        raise AuthorizationDeniedError("Not authorized to view datasets.")
+    return await repositories.datasets.list_datasets(
+        tenant_id=context.tenant_id, workspace_id=workspace_id, status=status
+    )
+
+
+async def update_dataset(
     *,
     context: TenantContext,
     dataset_id: UUID,
-    external_key: str | None,
     repositories: EvaluationRepositories,
-) -> TestCaseRecord:
-    if not context.can(TenantAction.CREATE_TEST_CASE):
-        emit_audit_event(
-            event="test_case_creation",
-            outcome="denied",
-            actor_user_id=str(context.user_id),
-            tenant_id=str(context.tenant_id),
-            role=context.role.value,
-        )
-        raise AuthorizationDeniedError("Not authorized to create a test case.")
+    name: str | None = None,
+    description: str | None = None,
+    tags: Sequence[str] | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> DatasetRecord:
+    """Update a dataset's mutable metadata. Any argument left ``None``
+    is untouched; this never reaches versioned content."""
+    if not context.can(TenantAction.UPDATE_DATASET):
+        _deny("dataset_update", context, "Not authorized to update a dataset.")
 
-    test_case = await repositories.datasets.create_test_case(
+    updated = await repositories.datasets.update_dataset(
         tenant_id=context.tenant_id,
         dataset_id=dataset_id,
-        external_key=external_key,
-        created_by=context.user_id,
+        name=name,
+        description=description,
+        tags=tuple(tags) if tags is not None else None,
+        metadata=metadata,
+        updated_by=context.user_id,
     )
+    if updated is None:
+        raise DatasetNotFoundError(str(dataset_id))
     emit_audit_event(
-        event="test_case_creation",
+        event="dataset_update",
         outcome="success",
         actor_user_id=str(context.user_id),
         tenant_id=str(context.tenant_id),
-        test_case_id=str(test_case.id),
+        dataset_id=str(dataset_id),
+        changed_fields=sorted(
+            field
+            for field, value in (
+                ("name", name),
+                ("description", description),
+                ("tags", tags),
+                ("metadata", metadata),
+            )
+            if value is not None
+        ),
     )
-    return test_case
+    return updated
 
 
-async def create_test_case_version(
-    *,
-    context: TenantContext,
-    test_case_id: UUID,
-    content: dict[str, Any],
-    repositories: EvaluationRepositories,
-) -> TestCaseVersionRecord:
-    """Create a new immutable content version for a test case.
+async def archive_dataset(
+    *, context: TenantContext, dataset_id: UUID, repositories: EvaluationRepositories
+) -> DatasetRecord:
+    """Archive a dataset. Archival is a status change, never a delete:
+    finalized snapshots and versioned content remain readable so runs
+    that referenced them stay explainable
+    (docs/REPRODUCIBILITY_CONTRACT.md)."""
+    if not context.can(TenantAction.ARCHIVE_DATASET):
+        _deny("dataset_archival", context, "Not authorized to archive a dataset.")
 
-    "Editable before snapshot" (docs/DOMAIN_MODEL.md) means a new
-    version may always be created — never that an existing version's
-    content is rewritten.
-    """
-    if not context.can(TenantAction.CREATE_TEST_CASE):
-        emit_audit_event(
-            event="test_case_version_creation",
-            outcome="denied",
-            actor_user_id=str(context.user_id),
-            tenant_id=str(context.tenant_id),
-            role=context.role.value,
-        )
-        raise AuthorizationDeniedError("Not authorized to create a test-case version.")
-
-    test_case = await repositories.datasets.get_test_case(
-        tenant_id=context.tenant_id, test_case_id=test_case_id
+    archived = await repositories.datasets.archive_dataset(
+        tenant_id=context.tenant_id, dataset_id=dataset_id, updated_by=context.user_id
     )
-    if test_case is None:
-        raise TestCaseNotFoundError(str(test_case_id))
-
-    existing_versions = await repositories.datasets.list_test_case_versions(
-        tenant_id=context.tenant_id, test_case_id=test_case_id
-    )
-    version_number = next_version_number(v.version_number for v in existing_versions)
-    content_hash = hash_canonical_content(content)
-
-    version = await repositories.datasets.create_test_case_version(
-        tenant_id=context.tenant_id,
-        test_case_id=test_case_id,
-        version_number=version_number,
-        content=content,
-        content_hash=content_hash,
-        hash_algorithm=HASH_ALGORITHM,
-        canonicalization_version=CANONICALIZATION_VERSION,
-        created_by=context.user_id,
-    )
+    if archived is None:
+        raise DatasetNotFoundError(str(dataset_id))
     emit_audit_event(
-        event="test_case_version_creation",
+        event="dataset_archival",
         outcome="success",
         actor_user_id=str(context.user_id),
         tenant_id=str(context.tenant_id),
-        test_case_id=str(test_case_id),
-        version_id=str(version.id),
-        version_number=version_number,
+        dataset_id=str(dataset_id),
     )
-    return version
+    return archived

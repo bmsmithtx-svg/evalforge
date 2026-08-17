@@ -11,8 +11,8 @@ The EvalForge roadmap contains exactly Milestones 0 through 15 in the order belo
 | 2 | Engineering and Infrastructure Foundation | Approved |
 | 3 | Authentication, Authorization, and Tenant Isolation | Approved |
 | 4 | Versioned Evaluation Domain and Persistence | Approved |
-| 5 | SDK, API, Trace, and Run Ingestion | Implemented and validated; pending owner review |
-| 6 | Dataset and Test-Case Management | Not started |
+| 5 | SDK, API, Trace, and Run Ingestion | Approved |
+| 6 | Dataset and Test-Case Management | Implemented and validated; pending owner review |
 | 7 | Experiment Execution and Reproducibility Engine | Not started |
 | 8 | Deterministic Evaluation Framework | Not started |
 | 9 | Model-Based and Human Evaluation | Not started |
@@ -100,7 +100,7 @@ Dependencies on prior milestones: Milestones 0–3 approved.
 
 ## Milestone 5 — SDK, API, Trace, and Run Ingestion
 
-Status: Implementation completed and validated 2026-08-15; owner review pending. See [Milestone 5 Completion Report](MILESTONE_5_COMPLETION_REPORT.md).
+Status: Approved. Implementation completed and validated 2026-08-15; owner approval recorded 2026-08-17. See [Milestone 5 Completion Report](MILESTONE_5_COMPLETION_REPORT.md).
 
 Objective: Implement controlled ingestion paths for runs, traces, spans, and artifacts through APIs and SDK contracts.
 
@@ -114,7 +114,7 @@ Dependencies on prior milestones: Milestones 0–4 approved.
 
 ## Milestone 6 — Dataset and Test-Case Management
 
-Status: Not started.
+Status: Implemented and validated 2026-08-17; owner review pending. See [Milestone 6 Completion Report](MILESTONE_6_COMPLETION_REPORT.md).
 
 Objective: Implement dataset and test-case authoring, import, export, versioning, and snapshot workflows.
 

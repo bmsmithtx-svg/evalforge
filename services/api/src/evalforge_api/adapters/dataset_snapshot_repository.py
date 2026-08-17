@@ -15,7 +15,10 @@ import asyncpg
 
 from evalforge_api.adapters.rls_session import set_tenant_session
 from evalforge_api.domain.evaluation_enums import DatasetSnapshotStatus, RetentionClass
-from evalforge_api.ports.datasets import DatasetSnapshotItemRecord, DatasetSnapshotRecord
+from evalforge_api.ports.dataset_snapshots import (
+    DatasetSnapshotItemRecord,
+    DatasetSnapshotRecord,
+)
 
 _SNAPSHOT_COLUMNS = (
     "id, tenant_id, dataset_id, status, content_hash, hash_algorithm, "
@@ -98,6 +101,22 @@ class PostgresDatasetSnapshotRepository:
                 tenant_id,
             )
         return _row_to_snapshot(row) if row is not None else None
+
+    async def list_snapshots(
+        self, *, tenant_id: UUID, dataset_id: UUID
+    ) -> tuple[DatasetSnapshotRecord, ...]:
+        async with self._pool.acquire() as connection, connection.transaction():
+            await set_tenant_session(connection, tenant_id=tenant_id)
+            rows = await connection.fetch(
+                f"""
+                SELECT {_SNAPSHOT_COLUMNS} FROM dataset_snapshots
+                WHERE dataset_id = $1 AND tenant_id = $2
+                ORDER BY created_at, id
+                """,  # noqa: S608
+                dataset_id,
+                tenant_id,
+            )
+        return tuple(_row_to_snapshot(row) for row in rows)
 
     async def add_item(
         self,

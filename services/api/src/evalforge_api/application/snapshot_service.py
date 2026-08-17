@@ -21,7 +21,10 @@ from evalforge_api.domain.hashing import (
 )
 from evalforge_api.domain.tenant_context import TenantContext
 from evalforge_api.domain.versioning import ensure_snapshot_is_draft
-from evalforge_api.ports.datasets import DatasetSnapshotRecord
+from evalforge_api.ports.dataset_snapshots import (
+    DatasetSnapshotItemRecord,
+    DatasetSnapshotRecord,
+)
 from evalforge_api.ports.evaluation_repositories import EvaluationRepositories
 
 __all__ = [
@@ -31,6 +34,9 @@ __all__ = [
     "add_test_case_version",
     "create_draft_snapshot",
     "finalize_snapshot",
+    "get_snapshot",
+    "list_snapshot_items",
+    "list_snapshots",
 ]
 
 
@@ -40,6 +46,44 @@ class AuthorizationDeniedError(Exception):
 
 class SnapshotNotFoundError(Exception):
     pass
+
+
+async def get_snapshot(
+    *, context: TenantContext, snapshot_id: UUID, repositories: EvaluationRepositories
+) -> DatasetSnapshotRecord:
+    if not context.can(TenantAction.VIEW_DATASET_SNAPSHOT):
+        raise AuthorizationDeniedError("Not authorized to view this dataset snapshot.")
+    snapshot = await repositories.snapshots.get_snapshot(
+        tenant_id=context.tenant_id, snapshot_id=snapshot_id
+    )
+    if snapshot is None:
+        raise SnapshotNotFoundError(str(snapshot_id))
+    return snapshot
+
+
+async def list_snapshots(
+    *, context: TenantContext, dataset_id: UUID, repositories: EvaluationRepositories
+) -> tuple[DatasetSnapshotRecord, ...]:
+    if not context.can(TenantAction.VIEW_DATASET_SNAPSHOT):
+        raise AuthorizationDeniedError("Not authorized to view dataset snapshots.")
+    return await repositories.snapshots.list_snapshots(
+        tenant_id=context.tenant_id, dataset_id=dataset_id
+    )
+
+
+async def list_snapshot_items(
+    *, context: TenantContext, snapshot_id: UUID, repositories: EvaluationRepositories
+) -> tuple[DatasetSnapshotItemRecord, ...]:
+    if not context.can(TenantAction.VIEW_DATASET_SNAPSHOT):
+        raise AuthorizationDeniedError("Not authorized to view dataset snapshot membership.")
+    snapshot = await repositories.snapshots.get_snapshot(
+        tenant_id=context.tenant_id, snapshot_id=snapshot_id
+    )
+    if snapshot is None:
+        raise SnapshotNotFoundError(str(snapshot_id))
+    return await repositories.snapshots.list_items(
+        tenant_id=context.tenant_id, snapshot_id=snapshot_id
+    )
 
 
 async def create_draft_snapshot(

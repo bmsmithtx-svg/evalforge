@@ -7,7 +7,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from evalforge_api.ports.artifacts import ArtifactObjectStorage, ArtifactRepository
-from evalforge_api.ports.datasets import DatasetRepository, DatasetSnapshotRepository
+from evalforge_api.ports.dataset_snapshots import DatasetSnapshotRepository
+from evalforge_api.ports.datasets import DatasetRepository
 from evalforge_api.ports.versioned_resources import VersionedResourceRepository
 from evalforge_api.ports.workspaces import EvaluationTargetRepository, WorkspaceRepository
 

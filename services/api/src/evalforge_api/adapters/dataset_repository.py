@@ -1,99 +1,160 @@
-"""PostgreSQL-backed dataset, test-case, and test-case-version repository."""
+"""PostgreSQL-backed dataset and test-case repository.
+
+The dataset/test-case half of the ``DatasetRepository`` port; the
+version half lives in ``adapters/test_case_version_repository.py`` and
+is inherited here so a single object satisfies the whole port.
+
+Mutability boundary: ``datasets`` and ``test_cases`` hold *mutable*
+attributes (name, description, tags, metadata, status, archival), so
+this adapter issues plain tenant-scoped UPDATEs against them. No
+trigger guards those tables because nothing on them is evidence —
+evidence lives in ``test_case_versions`` (append-only) and finalized
+``dataset_snapshots`` (trigger-protected).
+"""
 
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
-import asyncpg
-
-from evalforge_api.adapters.rls_session import set_tenant_session
-from evalforge_api.domain.evaluation_enums import DatasetStatus, RetentionClass, TestCaseStatus
-from evalforge_api.ports.datasets import DatasetRecord, TestCaseRecord, TestCaseVersionRecord
-
-_DATASET_COLUMNS = "id, tenant_id, workspace_id, name, status, created_by, created_at"
-_TEST_CASE_COLUMNS = "id, tenant_id, dataset_id, external_key, status, created_by, created_at"
-_TEST_CASE_VERSION_COLUMNS = (
-    "id, tenant_id, test_case_id, version_number, content, content_hash, hash_algorithm, "
-    "canonicalization_version, retention_class, retain_until, archived_at, created_by, created_at"
+from evalforge_api.adapters.dataset_row_mapping import (
+    DATASET_COLUMNS,
+    TEST_CASE_COLUMNS,
+    row_to_dataset,
+    row_to_test_case,
 )
+from evalforge_api.adapters.rls_session import set_tenant_session
+from evalforge_api.adapters.test_case_version_repository import PostgresTestCaseVersionRepository
+from evalforge_api.domain.evaluation_enums import DatasetStatus, TestCaseStatus
+from evalforge_api.ports.datasets import DatasetRecord, TestCaseRecord
 
 
-def _row_to_dataset(row: asyncpg.Record) -> DatasetRecord:
-    return DatasetRecord(
-        id=row["id"],
-        tenant_id=row["tenant_id"],
-        workspace_id=row["workspace_id"],
-        name=row["name"],
-        status=DatasetStatus(row["status"]),
-        created_by=row["created_by"],
-        created_at=row["created_at"],
-    )
-
-
-def _row_to_test_case(row: asyncpg.Record) -> TestCaseRecord:
-    return TestCaseRecord(
-        id=row["id"],
-        tenant_id=row["tenant_id"],
-        dataset_id=row["dataset_id"],
-        external_key=row["external_key"],
-        status=TestCaseStatus(row["status"]),
-        created_by=row["created_by"],
-        created_at=row["created_at"],
-    )
-
-
-def _row_to_test_case_version(row: asyncpg.Record) -> TestCaseVersionRecord:
-    return TestCaseVersionRecord(
-        id=row["id"],
-        tenant_id=row["tenant_id"],
-        test_case_id=row["test_case_id"],
-        version_number=row["version_number"],
-        content=json.loads(row["content"]),
-        content_hash=row["content_hash"],
-        hash_algorithm=row["hash_algorithm"],
-        canonicalization_version=row["canonicalization_version"],
-        retention_class=RetentionClass(row["retention_class"]),
-        retain_until=row["retain_until"],
-        archived_at=row["archived_at"],
-        created_by=row["created_by"],
-        created_at=row["created_at"],
-    )
-
-
-class PostgresDatasetRepository:
-    def __init__(self, pool: asyncpg.Pool) -> None:
-        self._pool = pool
-
+class PostgresDatasetRepository(PostgresTestCaseVersionRepository):
     async def create_dataset(
-        self, *, tenant_id: UUID, workspace_id: UUID, name: str, created_by: UUID
+        self,
+        *,
+        tenant_id: UUID,
+        workspace_id: UUID,
+        name: str,
+        description: str | None,
+        tags: Sequence[str],
+        metadata: dict[str, Any],
+        source: str,
+        cloned_from_dataset_id: UUID | None,
+        cloned_from_snapshot_id: UUID | None,
+        created_by: UUID,
     ) -> DatasetRecord:
         async with self._pool.acquire() as connection, connection.transaction():
             await set_tenant_session(connection, tenant_id=tenant_id)
             row = await connection.fetchrow(
                 f"""
-                INSERT INTO datasets (tenant_id, workspace_id, name, created_by)
-                VALUES ($1, $2, $3, $4)
-                RETURNING {_DATASET_COLUMNS}
+                INSERT INTO datasets (
+                    tenant_id, workspace_id, name, description, tags, metadata, source,
+                    cloned_from_dataset_id, cloned_from_snapshot_id, created_by
+                )
+                VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8, $9, $10)
+                RETURNING {DATASET_COLUMNS}
                 """,  # noqa: S608
                 tenant_id,
                 workspace_id,
                 name,
+                description,
+                json.dumps(list(tags)),
+                json.dumps(metadata),
+                source,
+                cloned_from_dataset_id,
+                cloned_from_snapshot_id,
                 created_by,
             )
         assert row is not None
-        return _row_to_dataset(row)
+        return row_to_dataset(row)
 
     async def get_dataset(self, *, tenant_id: UUID, dataset_id: UUID) -> DatasetRecord | None:
         async with self._pool.acquire() as connection, connection.transaction():
             await set_tenant_session(connection, tenant_id=tenant_id)
             row = await connection.fetchrow(
-                f"SELECT {_DATASET_COLUMNS} FROM datasets WHERE id = $1 AND tenant_id = $2",  # noqa: S608
+                f"SELECT {DATASET_COLUMNS} FROM datasets WHERE id = $1 AND tenant_id = $2",  # noqa: S608
                 dataset_id,
                 tenant_id,
             )
-        return _row_to_dataset(row) if row is not None else None
+        return row_to_dataset(row) if row is not None else None
+
+    async def list_datasets(
+        self, *, tenant_id: UUID, workspace_id: UUID | None, status: DatasetStatus | None
+    ) -> tuple[DatasetRecord, ...]:
+        async with self._pool.acquire() as connection, connection.transaction():
+            await set_tenant_session(connection, tenant_id=tenant_id)
+            rows = await connection.fetch(
+                f"""
+                SELECT {DATASET_COLUMNS} FROM datasets
+                WHERE tenant_id = $1
+                  AND ($2::uuid IS NULL OR workspace_id = $2)
+                  AND ($3::text IS NULL OR status = $3::dataset_status)
+                ORDER BY created_at, id
+                """,  # noqa: S608
+                tenant_id,
+                workspace_id,
+                status.value if status is not None else None,
+            )
+        return tuple(row_to_dataset(row) for row in rows)
+
+    async def update_dataset(
+        self,
+        *,
+        tenant_id: UUID,
+        dataset_id: UUID,
+        name: str | None,
+        description: str | None,
+        tags: Sequence[str] | None,
+        metadata: dict[str, Any] | None,
+        updated_by: UUID,
+    ) -> DatasetRecord | None:
+        """Partial update: a ``None`` argument leaves the column as it
+        is. ``description`` is cleared by passing an empty string."""
+        async with self._pool.acquire() as connection, connection.transaction():
+            await set_tenant_session(connection, tenant_id=tenant_id)
+            row = await connection.fetchrow(
+                f"""
+                UPDATE datasets SET
+                    name = COALESCE($3, name),
+                    description = COALESCE($4, description),
+                    tags = COALESCE($5::jsonb, tags),
+                    metadata = COALESCE($6::jsonb, metadata),
+                    updated_by = $7,
+                    updated_at = now()
+                WHERE id = $1 AND tenant_id = $2
+                RETURNING {DATASET_COLUMNS}
+                """,  # noqa: S608
+                dataset_id,
+                tenant_id,
+                name,
+                description,
+                json.dumps(list(tags)) if tags is not None else None,
+                json.dumps(metadata) if metadata is not None else None,
+                updated_by,
+            )
+        return row_to_dataset(row) if row is not None else None
+
+    async def archive_dataset(
+        self, *, tenant_id: UUID, dataset_id: UUID, updated_by: UUID
+    ) -> DatasetRecord | None:
+        async with self._pool.acquire() as connection, connection.transaction():
+            await set_tenant_session(connection, tenant_id=tenant_id)
+            row = await connection.fetchrow(
+                f"""
+                UPDATE datasets
+                SET status = 'archived', archived_at = COALESCE(archived_at, now()),
+                    updated_by = $3, updated_at = now()
+                WHERE id = $1 AND tenant_id = $2
+                RETURNING {DATASET_COLUMNS}
+                """,  # noqa: S608
+                dataset_id,
+                tenant_id,
+                updated_by,
+            )
+        return row_to_dataset(row) if row is not None else None
 
     async def create_test_case(
         self,
@@ -101,96 +162,76 @@ class PostgresDatasetRepository:
         tenant_id: UUID,
         dataset_id: UUID,
         external_key: str | None,
+        source: str,
+        source_test_case_id: UUID | None,
+        import_batch_id: UUID | None,
         created_by: UUID,
     ) -> TestCaseRecord:
         async with self._pool.acquire() as connection, connection.transaction():
             await set_tenant_session(connection, tenant_id=tenant_id)
             row = await connection.fetchrow(
                 f"""
-                INSERT INTO test_cases (tenant_id, dataset_id, external_key, created_by)
-                VALUES ($1, $2, $3, $4)
-                RETURNING {_TEST_CASE_COLUMNS}
+                INSERT INTO test_cases (
+                    tenant_id, dataset_id, external_key, source, source_test_case_id,
+                    import_batch_id, created_by
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                RETURNING {TEST_CASE_COLUMNS}
                 """,  # noqa: S608
                 tenant_id,
                 dataset_id,
                 external_key,
+                source,
+                source_test_case_id,
+                import_batch_id,
                 created_by,
             )
         assert row is not None
-        return _row_to_test_case(row)
+        return row_to_test_case(row)
 
     async def get_test_case(self, *, tenant_id: UUID, test_case_id: UUID) -> TestCaseRecord | None:
         async with self._pool.acquire() as connection, connection.transaction():
             await set_tenant_session(connection, tenant_id=tenant_id)
             row = await connection.fetchrow(
-                f"SELECT {_TEST_CASE_COLUMNS} FROM test_cases WHERE id = $1 AND tenant_id = $2",  # noqa: S608
+                f"SELECT {TEST_CASE_COLUMNS} FROM test_cases WHERE id = $1 AND tenant_id = $2",  # noqa: S608
                 test_case_id,
                 tenant_id,
             )
-        return _row_to_test_case(row) if row is not None else None
+        return row_to_test_case(row) if row is not None else None
 
-    async def create_test_case_version(
-        self,
-        *,
-        tenant_id: UUID,
-        test_case_id: UUID,
-        version_number: int,
-        content: dict[str, Any],
-        content_hash: str,
-        hash_algorithm: str,
-        canonicalization_version: str,
-        created_by: UUID,
-    ) -> TestCaseVersionRecord:
-        async with self._pool.acquire() as connection, connection.transaction():
-            await set_tenant_session(connection, tenant_id=tenant_id)
-            row = await connection.fetchrow(
-                f"""
-                INSERT INTO test_case_versions (
-                    tenant_id, test_case_id, version_number, content, content_hash,
-                    hash_algorithm, canonicalization_version, created_by
-                )
-                VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8)
-                RETURNING {_TEST_CASE_VERSION_COLUMNS}
-                """,  # noqa: S608
-                tenant_id,
-                test_case_id,
-                version_number,
-                json.dumps(content),
-                content_hash,
-                hash_algorithm,
-                canonicalization_version,
-                created_by,
-            )
-        assert row is not None
-        return _row_to_test_case_version(row)
-
-    async def get_test_case_version(
-        self, *, tenant_id: UUID, version_id: UUID
-    ) -> TestCaseVersionRecord | None:
-        async with self._pool.acquire() as connection, connection.transaction():
-            await set_tenant_session(connection, tenant_id=tenant_id)
-            row = await connection.fetchrow(
-                f"""
-                SELECT {_TEST_CASE_VERSION_COLUMNS} FROM test_case_versions
-                WHERE id = $1 AND tenant_id = $2
-                """,  # noqa: S608
-                version_id,
-                tenant_id,
-            )
-        return _row_to_test_case_version(row) if row is not None else None
-
-    async def list_test_case_versions(
-        self, *, tenant_id: UUID, test_case_id: UUID
-    ) -> tuple[TestCaseVersionRecord, ...]:
+    async def list_test_cases(
+        self, *, tenant_id: UUID, dataset_id: UUID, status: TestCaseStatus | None
+    ) -> tuple[TestCaseRecord, ...]:
         async with self._pool.acquire() as connection, connection.transaction():
             await set_tenant_session(connection, tenant_id=tenant_id)
             rows = await connection.fetch(
                 f"""
-                SELECT {_TEST_CASE_VERSION_COLUMNS} FROM test_case_versions
-                WHERE test_case_id = $1 AND tenant_id = $2
-                ORDER BY version_number
+                SELECT {TEST_CASE_COLUMNS} FROM test_cases
+                WHERE dataset_id = $1 AND tenant_id = $2
+                  AND ($3::text IS NULL OR status = $3::test_case_status)
+                ORDER BY created_at, id
+                """,  # noqa: S608
+                dataset_id,
+                tenant_id,
+                status.value if status is not None else None,
+            )
+        return tuple(row_to_test_case(row) for row in rows)
+
+    async def archive_test_case(
+        self, *, tenant_id: UUID, test_case_id: UUID, updated_by: UUID
+    ) -> TestCaseRecord | None:
+        async with self._pool.acquire() as connection, connection.transaction():
+            await set_tenant_session(connection, tenant_id=tenant_id)
+            row = await connection.fetchrow(
+                f"""
+                UPDATE test_cases
+                SET status = 'archived', archived_at = COALESCE(archived_at, now()),
+                    updated_by = $3, updated_at = now()
+                WHERE id = $1 AND tenant_id = $2
+                RETURNING {TEST_CASE_COLUMNS}
                 """,  # noqa: S608
                 test_case_id,
                 tenant_id,
+                updated_by,
             )
-        return tuple(_row_to_test_case_version(row) for row in rows)
+        return row_to_test_case(row) if row is not None else None

@@ -21,6 +21,10 @@ from evalforge_api.middleware.rate_limit import RateLimitMiddleware
 from evalforge_api.middleware.request_size_limit import RequestSizeLimitMiddleware
 from evalforge_api.routes import (
     auth,
+    dataset_import_export,
+    dataset_operations,
+    dataset_snapshots,
+    datasets,
     health,
     ingestion_artifacts,
     ingestion_runs,
@@ -28,6 +32,7 @@ from evalforge_api.routes import (
     ingestion_traces,
     readiness,
     tenants,
+    test_cases,
 )
 from evalforge_api.settings import Settings, get_settings
 
@@ -98,5 +103,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(ingestion_traces.router)
     app.include_router(ingestion_spans.router)
     app.include_router(ingestion_artifacts.router)
+    app.include_router(datasets.router)
+    app.include_router(test_cases.router)
+    app.include_router(dataset_snapshots.router)
+    app.include_router(dataset_import_export.router)
+    app.include_router(dataset_operations.router)
 
     return app

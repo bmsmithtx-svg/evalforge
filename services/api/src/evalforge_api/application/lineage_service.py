@@ -14,7 +14,7 @@ from uuid import UUID
 from evalforge_api.domain.actions import TenantAction
 from evalforge_api.domain.tenant_context import TenantContext
 from evalforge_api.ports.artifacts import ArtifactVersionRecord
-from evalforge_api.ports.datasets import DatasetSnapshotItemRecord
+from evalforge_api.ports.dataset_snapshots import DatasetSnapshotItemRecord
 from evalforge_api.ports.evaluation_repositories import EvaluationRepositories
 from evalforge_api.ports.versioned_resources import VersionedResourceVersionRecord
 

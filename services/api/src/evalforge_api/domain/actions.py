@@ -37,6 +37,16 @@ class TenantAction(StrEnum):
     INGEST_TRACE = "ingest_trace"
     VIEW_TRACE = "view_trace"
 
+    # Milestone 6: dataset and test-case management. Read paths
+    # (list, get, history, compare, sample, export, duplicate check)
+    # deliberately reuse VIEW_DATASET / VIEW_DATASET_SNAPSHOT rather
+    # than adding view-only actions, matching the existing "every role
+    # may view evaluation evidence" convention above.
+    UPDATE_DATASET = "update_dataset"
+    ARCHIVE_DATASET = "archive_dataset"
+    CLONE_DATASET = "clone_dataset"
+    IMPORT_TEST_CASES = "import_test_cases"
+
 
 # Milestone 4 read-only actions every membership role may perform: a
 # reviewer or read-only observer needs to see evidence (targets,
@@ -81,6 +91,15 @@ _EVALUATION_ENGINEER_MUTATIONS: frozenset[TenantAction] = frozenset(
         TenantAction.CREATE_TEST_CASE,
         TenantAction.FINALIZE_DATASET_SNAPSHOT,
         TenantAction.CREATE_ARTIFACT,
+        # Milestone 6: managing a dataset's mutable metadata, its
+        # lifecycle, and bulk authoring (clone, import) belongs to the
+        # same "creates and manages datasets" ownership as authoring
+        # individual test cases. tenant_admin inherits all of these
+        # through the set union in _ROLE_PERMISSIONS below.
+        TenantAction.UPDATE_DATASET,
+        TenantAction.ARCHIVE_DATASET,
+        TenantAction.CLONE_DATASET,
+        TenantAction.IMPORT_TEST_CASES,
     }
 )
 
