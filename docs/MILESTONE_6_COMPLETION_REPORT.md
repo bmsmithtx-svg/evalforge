@@ -1,13 +1,14 @@
 # Milestone 6 Completion Report
 
-Date: 2026-08-17.
+Date: 2026-08-17. Updated 2026-08-18 for the correction pass described below.
 
 ## Repository Identity
 
 - Remote: `https://github.com/bmsmithtx-svg/evalforge.git`
 - Branch: `main`
 - Starting commit: `c7744d65cf8d850ec62c6e6c29acba14f4bc5548` (Milestone 5 implementation; owner-approved baseline per this milestone's authorization, recorded in this session before Milestone 6 began)
-- Final local commit: recorded in [Git](#git) below, after this report is committed.
+- Milestone 6 implementation commit: `f6421ad10652d81dc9d14431483e2a1fb37946bc` (`feat: implement dataset and test-case management`).
+- Correction-pass commit (owner-review findings, this change): message `fix: close milestone 6 review findings`; its exact SHA and push confirmation are reported in the closure message that accompanies this report, per the same convention the original Milestone 6 report used for its own commit (a commit cannot contain its own hash).
 
 ## Roadmap Status
 
@@ -23,6 +24,20 @@ Date: 2026-08-17.
 ## Owner Approval
 
 Milestone 6 (Dataset and Test-Case Management) was authorized and implemented in this session. It is not yet owner-approved; this report is submitted for owner review. Milestone 7 has not been started.
+
+## Correction Pass (2026-08-18)
+
+The owner's Milestone 6 review returned two findings against implementation commit `f6421ad10652d81dc9d14431483e2a1fb37946bc`. Both are resolved in a single additive correction commit; no other behavior changed and Milestone 7 was not started.
+
+**Preflight for this pass**: repository `bmsmithtx-svg/evalforge`, path `/Users/bmsm1th/Documents/evalforge`, branch `main`, remote `origin` confirmed canonical. `git fetch --prune origin` run; `HEAD` and `origin/main` both confirmed at `f6421ad10652d81dc9d14431483e2a1fb37946bc` exactly, working tree clean, before any file was touched.
+
+**Finding 1 — duplicate-check resource semantics were inconsistent with every other dataset operation.** `duplicate_detection_service.check_for_duplicates` queried `list_current_dedup_hashes` directly and returned an empty tuple for an inaccessible or nonexistent dataset (`200` with `duplicate_test_case_ids: []`), instead of the standardized not-found path every other dataset operation (GET/update/archive/clone) uses. Corrected: the service now resolves the dataset through the same tenant-scoped `repositories.datasets.get_dataset` lookup `dataset_service.get_dataset` already uses, and raises the existing `DatasetNotFoundError` (routed through the existing `routes/dataset_error_mapping.py` to `404`, same as GET/update/clone) when it returns `None`. No second, discriminating error type or cross-tenant oracle was added — a real foreign dataset and a random UUID still produce byte-identical exception type and message. RBAC (`VIEW_DATASET`), RLS, and repository tenant scoping are unchanged. New/updated tests in `services/api/tests/test_dataset_duplicate_detection.py` (owned dataset still works; random nonexistent dataset → `DatasetNotFoundError`; another tenant's dataset → the same `DatasetNotFoundError`, with identical exception type and id-only message against a real foreign dataset vs. a random UUID; all five pre-existing active/latest-version duplicate-detection behaviors unchanged) and an added HTTP-level assertion in `test_dataset_operation_routes.py` (`POST .../duplicate-check` against a cross-tenant dataset id now returns `404`, alongside the pre-existing GET/PATCH/clone `404` assertions).
+
+**Finding 2 — legacy `dedup_hash = ''` rows would never participate in duplicate detection.** Migration `0009_dataset_test_case_mgmt` adds `test_case_versions.dedup_hash TEXT NOT NULL DEFAULT ''` so the `NOT NULL` constraint can attach to a table that might already hold rows; every application-layer insert supplies a real hash, but a row that predated this migration would keep `''` forever, and `list_current_dedup_hashes` reads the column directly with no fallback recomputation — so a pre-existing test case's genuine duplicates would silently go undetected. Considered and rejected: reimplementing `domain.duplicate_detection.compute_dedup_hash`'s normalization (Unicode case-folding, recursive-sort-keys canonical JSON, `docs/REPRODUCIBILITY_CONTRACT.md`'s SHA-256 scheme) as raw SQL inside the migration — that would be a second, drift-prone hashing implementation, exactly what the reproducibility contract forbids, for a purely mechanical reason (Postgres has no built-in equivalent of Python's Unicode `casefold()` or `json.dumps(sort_keys=True, ensure_ascii=True)`). Instead, migration `0009` now calls the exact domain function from Python, from inside the migration itself, immediately after adding the column and index: `_backfill_legacy_dedup_hashes()` selects every `test_case_versions` row with `dedup_hash = ''`, computes `compute_dedup_hash(TestCaseContent.from_json_dict(content))` — the identical call `dataset_clone_service.py` already makes as its own empty-hash fallback — and `UPDATE`s the row. A row whose stored content cannot be read as valid `TestCaseContent` (none exist today; Milestone 4's pre-Milestone-6 content was an unstructured `dict[str, Any]` that by established test/API convention already always carried `input`, but a migration must not assume that) is left at `''` rather than aborting the whole migration — there is no such row today, so this path is unexercised in practice but present for safety. Migration `database_url`'s role is the Postgres bootstrap superuser (`POSTGRES_USER=evalforge` in `infrastructure/docker-compose.test.yml`), so it bypasses RLS/`FORCE ROW LEVEL SECURITY` for this backfill exactly as it does for every other DDL statement in the same migration — no privilege change was made. `downgrade()` is unchanged: it still drops the column (and therefore the backfilled values) along with everything else `0009` added, so the up/down/up cycle stays fully reversible. New regression test `services/api/tests/test_dataset_dedup_hash_backfill_migration.py` downgrades the live test database to `0008_evidence_idempotency`, inserts a `test_case_versions` row shaped exactly like the pre-Milestone-6 schema (no `dedup_hash` column exists at that point), upgrades back to head, and proves both that the backfilled hash exactly equals `compute_dedup_hash(TestCaseContent.from_json_dict(...))` computed independently in the test, and — functionally, not just at the column level — that `duplicate_detection_service.check_for_duplicates` now recognizes a newly submitted, differently-formatted duplicate against that pre-migration row.
+
+**Scope discipline**: no Milestone 7 functionality, no new execution engine, no evaluators, no frontend product work, and no architecture change. The diff touches exactly one application module, one migration, and three test files (one new). `domain → ports ← adapters ; application ; routes` is unchanged; `duplicate_detection_service.py` now imports `DatasetNotFoundError` from the same `dataset_errors` module every other dataset service already uses — no second error vocabulary.
+
+See [Validation](#validation) for full command-by-command results re-run after these changes, and [Git](#git) for the exact commit/push state.
 
 ## Preflight
 
@@ -79,7 +94,7 @@ Draft/publish semantics were not reinvented: a test case's mutable state is simp
 
 - `datasets` gains `description`, `tags` (JSONB), `metadata` (JSONB), `updated_at`, `updated_by`, `archived_at`, `source` (`manual`/`cloned`, `CHECK`-constrained), `cloned_from_dataset_id`, `cloned_from_snapshot_id` (both composite `(id, tenant_id)` foreign keys — the second self-referential), plus `ix_datasets_status`.
 - `test_cases` gains `updated_at`, `updated_by`, `archived_at`, `source` (`manual`/`imported`/`cloned`, `CHECK`-constrained), `source_test_case_id` (composite self-referential FK), `import_batch_id`, plus `ix_test_cases_import_batch_id`.
-- `test_case_versions` gains `dedup_hash` (`NOT NULL DEFAULT ''`, real values supplied by every application-layer insert) plus a composite index `ix_test_case_versions_dedup_hash (test_case_id, dedup_hash)`.
+- `test_case_versions` gains `dedup_hash` (`NOT NULL DEFAULT ''`, real values supplied by every application-layer insert) plus a composite index `ix_test_case_versions_dedup_hash (test_case_id, dedup_hash)`. `upgrade()` backfills any pre-existing `dedup_hash = ''` row in the same migration by calling the exact domain hashing function (added 2026-08-18; see [Correction Pass](#correction-pass-2026-08-18)), so no historical row is permanently left out of duplicate detection.
 - `GRANT UPDATE ON datasets, test_cases TO evalforge_app` — the only grant change. `test_case_versions` and `dataset_snapshot_items` remain `SELECT, INSERT` only; `dataset_snapshots` keeps its pre-existing trigger-guarded `UPDATE` (draft→finalized only). No table anywhere grants `DELETE`.
 - `downgrade()` reverses every column, index, constraint, and grant. Verified live, twice, against the real test database (not just written):
 
@@ -90,6 +105,8 @@ alembic upgrade head                                     current = 0009_dataset_
 ```
 
 I ran this sequence myself, independently of the implementing agent, against the live `evalforge_test` Postgres database.
+
+Re-verified 2026-08-18 after the correction-pass backfill was added, with the same `upgrade head` → `downgrade 0008_evidence_idempotency` → `upgrade head` sequence, plus a dedicated regression test (`test_dataset_dedup_hash_backfill_migration.py`) that downgrades, inserts a pre-Milestone-6-shaped row, upgrades, and proves its `dedup_hash` was correctly backfilled and that duplicate detection now recognizes it — see [Correction Pass](#correction-pass-2026-08-18) and [Validation](#validation).
 
 **RLS**: unaffected by `ALTER TABLE ... ADD COLUMN` — `datasets`, `test_cases`, `test_case_versions`, `dataset_snapshots`, `dataset_snapshot_items` remain `ENABLE`/`FORCE ROW LEVEL SECURITY` from Migration 0004, verified still true by `test_dataset_migration.py`.
 
@@ -133,7 +150,7 @@ Context/source references, labels/tags/metadata, tool/trajectory expectations: a
 
 **Implementation**: `domain/duplicate_detection.py` (pure) + `application/duplicate_detection_service.py`, which calls `DatasetRepository.list_current_dedup_hashes` — a tenant-and-dataset-scoped query over each active test case's latest version.
 
-**Tenant isolation**: the repository call is scoped to `(tenant_id, dataset_id)`; a duplicate check against another tenant's dataset ID resolves through the same not-found path as any other cross-tenant lookup (`DatasetNotFoundError`), never a partial result or a disclosure. Verified by `test_dataset_tenant_isolation.py`/`test_dataset_duplicate_detection.py`.
+**Tenant isolation**: the dataset is resolved through the same tenant-scoped `get_dataset` lookup every other dataset operation uses before any duplicate query runs; a duplicate check against another tenant's dataset ID (or a random nonexistent one) resolves through the same not-found path as any other cross-tenant lookup (`DatasetNotFoundError` → `404`), never a partial `200` result or a disclosure. (Corrected 2026-08-18 — see [Correction Pass](#correction-pass-2026-08-18): the original implementation queried the dedup-hash table directly and returned an empty result for an inaccessible dataset instead of raising this error.) Verified by `test_dataset_tenant_isolation.py`/`test_dataset_duplicate_detection.py`/`test_dataset_operation_routes.py`.
 
 ## Cloning / Sampling / Splits
 
@@ -183,6 +200,40 @@ New test files (18) and their focus: `test_test_case_content_domain.py`, `test_d
 
 **Regression**: all 322 pre-existing Milestone 0–5 tests continue to pass unchanged in substance. Two migration-head-pinning tests were updated using the exact precedent already established at the Milestone 4→5 boundary: `test_ingestion_migration.py`'s head-revision pin became a schema-existence check (the head moved past `0008_evidence_idempotency`); `test_evaluation_migration.py`'s UPDATE-grant assertion now expects `{dataset_snapshots, datasets, test_cases}` instead of `{dataset_snapshots}` alone, because this milestone explicitly authorizes those two new grants. Neither change weakens an assertion — both track a state change this milestone deliberately makes. `test_dataset_migration.py` now pins the exact head revision `0009_dataset_test_case_mgmt`.
 
+### Correction-Pass Re-Validation (2026-08-18)
+
+I ran every command myself in this session, independently of the implementing agent, against the real Postgres/MinIO test stack (`make test-services-up`, containers already healthy from the prior session), after both corrections above and their new/updated tests were in place. Every result below is a real, observed outcome — none is fabricated or assumed.
+
+**Environment notes**:
+
+1. The `.pth`-hidden-file condition described in the original Validation section above still exists — I re-confirmed it by running `make validate` with a bare relative `PYTHONPATH=services/api/src`: the `lint`/`typecheck` steps (which stay in the repo root or `cd` into `apps/web`) worked, but the `test` target's `cd services/api && pytest` recipe resolves `PYTHONPATH` *relative to the new working directory after the `cd`*, so the relative path no longer points at `services/api/src` and the import fails (`ModuleNotFoundError: No module named 'evalforge_api'`) — a `Makefile`-recipe propagation gap distinct from, and in addition to, the underlying hidden-`.pth` cause. Passing an **absolute** `PYTHONPATH` (covering both `services/api/src` and `packages/evalforge-sdk/src`, since the SDK's own pytest step hits the identical issue) lets `make validate` run every step through the SDK test suite. This is a host/environment condition, not a Milestone 6 or correction-pass code defect; no `Makefile` change was made, per this pass's narrow scope.
+2. This host was under heavy contention for roughly the first 45 minutes of this validation pass (load average ~4, only ~79 MB of ~7.5 GB physical memory free, heavy memory compression) — `pytest` and `eslint` each sat at ~0% incremental CPU for 10+ minutes at a time before making progress. I identified a set of ~11 long-idle (weeks-old), unrelated background helper processes from a different tool (`Codex.app`, tied to two other, unrelated local projects) as the most plausible stale/unrelated contributors and attempted to terminate them per this pass's own contention-handling instructions; the termination attempt was blocked by this session's own permission policy, so I did not proceed and did not attempt to route around that block. I instead retried the validation repeatedly as contention eased on its own — the backend suite dropped from 657s to ~60–73s across retries, consistent with genuine host contention rather than a code-caused hang.
+3. `apps/web`'s `npm test` (`vitest run`) could not be completed: every attempt (the plain script, `--no-file-parallelism`, `--pool=threads`, and three more retries once the rest of the host had quieted down — six attempts in total) failed identically with `[vitest-pool]: Timeout waiting for worker to respond` before a single test file's worker process/thread finished starting — `Test Files: no tests`, `Tests: no tests`, not a single assertion failure. `npm run lint`, `npm run format:check`, and `npm run typecheck` for `apps/web` all completed and passed cleanly in the same session, as did every Postgres-backed step of `npm run test`'s sibling suites (`services/api`, `packages/evalforge-sdk`), which rules out general host unavailability as the sole explanation — this looks specific to Vitest's worker-pool startup handshake in this environment rather than a broad resource ceiling. This correction pass did not touch any file under `apps/web`; the frontend was independently verified passing (`eslint`, `prettier --check`, `tsc --noEmit`) in this same session, and `vitest` was last confirmed passing in the Milestone 5 session. I did not fabricate a pass for this one check. The owner should re-run `cd apps/web && npm test` on a quieter host or investigate the Vitest worker-pool startup handshake before treating this as fully closed.
+
+| Command | Result |
+|---|---|
+| `ruff check services/api/src services/api/tests services/api/alembic` | All checks passed |
+| `ruff format --check services/api/src services/api/tests services/api/alembic` | 178 files already formatted |
+| `mypy src` (services/api) | Success: no issues found in 108 source files |
+| `pytest` (services/api) | **343 passed**, 0 failed, 8 warnings, 90% coverage |
+| `ruff check` / `ruff format --check` (packages/evalforge-sdk) | All checks passed / 17 files already formatted |
+| `mypy src` (packages/evalforge-sdk) | Success: no issues found in 9 source files |
+| `pytest` (packages/evalforge-sdk) | **34 passed**, 0 failed, 99% coverage |
+| `apps/web`: `npm run lint` | passed (no output — clean) |
+| `apps/web`: `npm run format:check` | passed — "All matched files use Prettier code style!" |
+| `apps/web`: `npm run typecheck` | passed (no output — clean) |
+| `apps/web`: `npm test` (`vitest run`) | **did not complete** — worker-pool startup timeout, six attempts, see note 3 above; not a claimed pass |
+| `python3 scripts/validate_modularity.py` | passed — no file exceeds 300 lines |
+| `python3 scripts/validate_forbidden_filenames.py` | passed |
+| `python3 scripts/validate_markdown_links.py` | passed |
+| `python3 scripts/validate_dependency_boundaries.py` | passed |
+| `python3 scripts/validate_circular_imports.py` | passed |
+| `python3 scripts/validate_no_secrets.py` | passed — no committed-secret patterns found |
+| `alembic upgrade head` / `downgrade 0008_evidence_idempotency` / `upgrade head` | all passed (live test database), plus `test_dataset_dedup_hash_backfill_migration.py` proving a pre-0009-shaped row is correctly backfilled and recognized by duplicate detection after the cycle |
+| `PYTHONPATH=<abs services/api/src>:<abs packages/evalforge-sdk/src> make validate` | every step passed through and including the `packages/evalforge-sdk` test suite; halted at `apps/web`'s `npm test` per note 3 — this is the one command in the full authoritative chain not reporting a completed pass, and it is not reported as one |
+
+Backend/SDK test-count change: **340 → 343** for `services/api` (net +3: one new dataset-not-found test plus one new cross-tenant-indistinguishability test in `test_dataset_duplicate_detection.py`, replacing the one test that asserted the old, incorrect empty-result behavior; one new migration-backfill regression test). `packages/evalforge-sdk` is untouched by this correction pass (34 passed, unchanged).
+
 ## Deviations From the Original Task Brief (recorded for owner review)
 
 1. Three port/repository methods were added beyond my initial specification to the implementing agent, all necessary consequences of the atomicity and clone/export requirements: `create_test_cases_with_versions` (single-transaction bulk insert for import, keeping the connection pool out of the application layer), `list_latest_versions_for_dataset` (clone-from-current-state and export), and the `TestCaseSeedRow` dataclass.
@@ -208,21 +259,31 @@ Updated: `docs/DOMAIN_MODEL.md` (new "Implementation Notes (Milestone 6)" sectio
 - **Docs**: `docs/DOMAIN_MODEL.md`; this report; `README.md`, `docs/ROADMAP.md` (milestone-status lines).
 - **Removed**: the stray untracked `services/api/src/evalforge_api/middleware/request_size_limit 2.py` (was never tracked; not part of this commit's diff).
 
+### Correction Pass (2026-08-18)
+
+- **Migration**: `services/api/alembic/versions/20260817_0009_dataset_test_case_management.py` (modified — legacy `dedup_hash` backfill added to `upgrade()`; `downgrade()` unchanged).
+- **Backend application**: `services/api/src/evalforge_api/application/duplicate_detection_service.py` (modified — resolves the dataset through the tenant-scoped lookup before querying dedup hashes; raises `DatasetNotFoundError` instead of returning an empty result).
+- **Backend tests**: `services/api/tests/test_dataset_duplicate_detection.py` (modified — one test replaced, two added), `services/api/tests/test_dataset_operation_routes.py` (modified — one HTTP `404` assertion added), `services/api/tests/test_dataset_dedup_hash_backfill_migration.py` (new).
+- **Docs**: this report.
+- No files under `apps/web`, no domain/ports/adapters/routes files beyond the one application module above, no other migration.
+
 ## Explicit Exclusions
 
 Confirmed not implemented: Milestone 7 experiment execution/scheduling/worker orchestration; Milestone 8+ deterministic, model-judge, or human-review evaluators; RAG, tool-use, or agent-trajectory evaluation *execution*; comparison/regression/quality-gate engines; annotation or human-labeling UI; a dataset marketplace; semantic/embedding-based duplicate detection; new distributed locking; production model-training pipelines; broad dashboards or unrelated frontend work; unrelated infrastructure changes. Sampling/split results are deliberately not persisted, to avoid introducing experiment-adjacent state ahead of Milestone 7.
 
 ## Residual Risks
 
-- The macOS-hidden-`.pth`/sync-process environment issue described under Validation is a host condition, not a code defect; it affects local developer ergonomics (`make validate` needs `PYTHONPATH` set until resolved) but not CI (GitHub Actions runners are not subject to this local sync process) or runtime behavior.
-- `dedup_hash` defaults to `''` for any hypothetical pre-migration row; no production data exists yet, so this is a schema-correctness note rather than a live data-quality concern. `dataset_clone_service` recomputes a real hash whenever it encounters an empty one.
+- The macOS-hidden-`.pth`/sync-process environment issue described under Validation is a host condition, not a code defect; it affects local developer ergonomics (`make validate` needs an **absolute** `PYTHONPATH` set until resolved — a relative one breaks across the `Makefile`'s `cd services/api`/`cd packages/evalforge-sdk` recipe boundaries, confirmed during the 2026-08-18 correction pass) but not CI (GitHub Actions runners are not subject to this local sync process) or runtime behavior.
+- ~~`dedup_hash` defaults to `''` for any hypothetical pre-migration row...~~ **Resolved 2026-08-18**: migration `0009`'s `upgrade()` now backfills any pre-existing `dedup_hash = ''` row using the exact domain hashing function; see [Correction Pass](#correction-pass-2026-08-18). No production data existed at the time of the fix, so this was a schema-correctness closure rather than a live data-repair operation, but the mechanism is now in place for any environment that ran `0009` before this fix, including the developer/test databases used in both sessions.
+- `apps/web`'s `npm test` (`vitest run`) could not be completed during the 2026-08-18 correction-pass validation — a worker-pool startup timeout reproduced across six attempts and multiple pool strategies on a contended host, with `npm run lint`/`format:check`/`typecheck` all passing cleanly in the same session and no `apps/web` file touched by either Milestone 6 or this correction pass. This is recorded as an open residual risk, not a claimed pass; the owner should re-run `cd apps/web && npm test` on a quieter host before treating frontend validation as fully closed.
 - Sampling/splitting requires a *finalized* snapshot by design (stability); a caller wanting to preview a sample over in-progress draft content must finalize a snapshot first — a deliberate constraint, not a gap.
 
-No known critical or high-severity Milestone 6 security flaw remains unresolved.
+No known critical or high-severity Milestone 6 security flaw remains unresolved. The duplicate-check resource-semantics inconsistency (Correction 1) was not classified as a high-severity information leak — inaccessible and nonexistent dataset IDs were already indistinguishable — but it is fully resolved.
 
 ## Git
 
-- Commit message: `feat: implement dataset and test-case management`
-- The commit is local only at report-writing time; push result recorded in the closure message that accompanies this report.
+- Milestone 6 implementation commit: `f6421ad10652d81dc9d14431483e2a1fb37946bc` — `feat: implement dataset and test-case management` — pushed to `origin/main` prior to this correction pass (confirmed via `git fetch --prune origin`; `HEAD == origin/main == f6421ad10652d81dc9d14431483e2a1fb37946bc` at the start of this pass, working tree clean).
+- Correction-pass commit message: `fix: close milestone 6 review findings`. This is a single additive commit on top of `f6421ad1...`; the Milestone 6 implementation commit itself was not amended or rewritten.
+- Final state after this pass: `HEAD == origin/main`, working tree clean, no divergence. The exact correction-pass SHA and push confirmation are reported in the closure message that accompanies this report — see [Correction Pass](#correction-pass-2026-08-18) for what changed and why.
 
 Related documents: [Roadmap](ROADMAP.md), [Domain Model](DOMAIN_MODEL.md), [Reproducibility Contract](REPRODUCIBILITY_CONTRACT.md), [Tenancy and Authorization](TENANCY_AND_AUTHORIZATION.md), [Milestone Acceptance](MILESTONE_ACCEPTANCE.md), [Milestone 4 Completion Report](MILESTONE_4_COMPLETION_REPORT.md), [Milestone 5 Completion Report](MILESTONE_5_COMPLETION_REPORT.md).

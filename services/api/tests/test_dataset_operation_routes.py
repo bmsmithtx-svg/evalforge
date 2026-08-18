@@ -245,6 +245,14 @@ async def test_cross_tenant_dataset_access_over_http_is_not_found(
         ).status_code
         == 404
     )
+    assert (
+        api_client.post(
+            f"/tenants/{tenant_a}/datasets/{dataset_b}/duplicate-check",
+            json={"content": {"input": "probe"}},
+            headers=_auth(token_a),
+        ).status_code
+        == 404
+    )
     # Tenant A pointing at Tenant B's tenant path: forbidden, not found.
     assert (
         api_client.get(

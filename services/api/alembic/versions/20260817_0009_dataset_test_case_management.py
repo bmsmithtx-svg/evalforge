@@ -14,6 +14,19 @@ Provenance columns record where a dataset or test case came from
 snapshot) using composite ``(id, tenant_id)`` foreign keys, so a
 cross-tenant lineage reference remains impossible to insert.
 
+``dedup_hash`` backfill: every row that predates this migration gets
+the ``''`` column default and would otherwise never participate in
+duplicate detection. Reproducing ``domain.duplicate_detection``'s
+normalization (Unicode case-folding, recursive-sort-keys canonical
+JSON) as raw SQL would be a second, drift-prone hashing
+implementation — exactly what ``docs/REPRODUCIBILITY_CONTRACT.md``
+forbids. Instead, ``_backfill_legacy_dedup_hashes`` below calls that
+exact domain function from within the migration, so there is still
+only one hashing implementation in the codebase. A row whose stored
+content cannot be read as valid ``TestCaseContent`` (there is no such
+row today, but a migration must not assume that) is left with an
+empty hash rather than aborting the whole migration.
+
 Revision ID: 0009_dataset_test_case_mgmt
 Revises: 0008_evidence_idempotency
 Create Date: 2026-08-17
@@ -21,8 +34,10 @@ Create Date: 2026-08-17
 
 from __future__ import annotations
 
+import json
 from collections.abc import Sequence
 
+import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0009_dataset_test_case_mgmt"
@@ -31,6 +46,29 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 _APP_ROLE = "evalforge_app"
+
+
+def _backfill_legacy_dedup_hashes() -> None:
+    from evalforge_api.domain.duplicate_detection import compute_dedup_hash
+    from evalforge_api.domain.test_case_content import (
+        InvalidTestCaseContentError,
+        TestCaseContent,
+    )
+
+    bind = op.get_bind()
+    rows = bind.execute(
+        sa.text("SELECT id, content FROM test_case_versions WHERE dedup_hash = ''")
+    ).fetchall()
+    for row in rows:
+        content = row.content if isinstance(row.content, dict) else json.loads(row.content)
+        try:
+            dedup_hash = compute_dedup_hash(TestCaseContent.from_json_dict(content))
+        except InvalidTestCaseContentError:
+            continue
+        bind.execute(
+            sa.text("UPDATE test_case_versions SET dedup_hash = :hash WHERE id = :id"),
+            {"hash": dedup_hash, "id": row.id},
+        )
 
 
 def upgrade() -> None:
@@ -97,6 +135,7 @@ def upgrade() -> None:
         "CREATE INDEX ix_test_case_versions_dedup_hash "
         "ON test_case_versions (test_case_id, dedup_hash)"
     )
+    _backfill_legacy_dedup_hashes()
 
     # Mutable-metadata tables only. test_case_versions and
     # dataset_snapshot_items remain INSERT/SELECT, and dataset_snapshots
