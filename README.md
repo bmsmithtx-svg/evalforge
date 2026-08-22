@@ -18,6 +18,8 @@ Phase 1 is planned to establish:
 
 EvalForge is not yet a product with evaluation functionality. This repository currently contains the Milestone 0 workspace skeleton, the Milestone 1 product/architecture/governance contracts, the Milestone 2 engineering and infrastructure foundation, the Milestone 3 authentication, authorization, and tenant-isolation security boundary, the Milestone 4 versioned evaluation domain and persistence layer, the Milestone 5 SDK, API, trace, and run ingestion boundary, and the Milestone 6 dataset and test-case management API. No experiment execution, evaluators, or dashboards exist yet — that begins in Milestone 7 and later.
 
+Milestone 7 (Experiment Execution and Reproducibility Engine) has been authorized following Milestone 6 owner approval.
+
 ## Current Status
 
 - Milestone 0 — Repository and Local Workspace Setup: approved.
@@ -26,8 +28,9 @@ EvalForge is not yet a product with evaluation functionality. This repository cu
 - Milestone 3 — Authentication, Authorization, and Tenant Isolation: approved.
 - Milestone 4 — Versioned Evaluation Domain and Persistence: approved.
 - Milestone 5 — SDK, API, Trace, and Run Ingestion: approved.
-- Milestone 6 — Dataset and Test-Case Management: implemented and validated, pending owner review.
-- Milestones 7–15: not started.
+- Milestone 6 — Dataset and Test-Case Management: approved (owner approval recorded 2026-08-22).
+- Milestone 7 — Experiment Execution and Reproducibility Engine: authorized; not yet started as of this update.
+- Milestones 8–15: not started.
 
 Later milestones must follow the locked roadmap sequentially. No later-milestone functionality may be preimplemented before that milestone is authorized.
 

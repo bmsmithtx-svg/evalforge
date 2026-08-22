@@ -12,8 +12,8 @@ The EvalForge roadmap contains exactly Milestones 0 through 15 in the order belo
 | 3 | Authentication, Authorization, and Tenant Isolation | Approved |
 | 4 | Versioned Evaluation Domain and Persistence | Approved |
 | 5 | SDK, API, Trace, and Run Ingestion | Approved |
-| 6 | Dataset and Test-Case Management | Implemented and validated; pending owner review |
-| 7 | Experiment Execution and Reproducibility Engine | Not started |
+| 6 | Dataset and Test-Case Management | Approved |
+| 7 | Experiment Execution and Reproducibility Engine | Authorized; not started |
 | 8 | Deterministic Evaluation Framework | Not started |
 | 9 | Model-Based and Human Evaluation | Not started |
 | 10 | RAG, Grounding, and Citation Evaluation | Not started |
@@ -114,7 +114,7 @@ Dependencies on prior milestones: Milestones 0–4 approved.
 
 ## Milestone 6 — Dataset and Test-Case Management
 
-Status: Implemented and validated 2026-08-17; owner review pending. See [Milestone 6 Completion Report](MILESTONE_6_COMPLETION_REPORT.md).
+Status: Approved. Implementation completed and validated 2026-08-17, correction pass completed 2026-08-18; owner approval recorded 2026-08-22. See [Milestone 6 Completion Report](MILESTONE_6_COMPLETION_REPORT.md).
 
 Objective: Implement dataset and test-case authoring, import, export, versioning, and snapshot workflows.
 
@@ -128,7 +128,7 @@ Dependencies on prior milestones: Milestones 0–5 approved.
 
 ## Milestone 7 — Experiment Execution and Reproducibility Engine
 
-Status: Not started.
+Status: Authorized 2026-08-22 following Milestone 6 owner approval; not yet started as of this governance update.
 
 Objective: Implement durable experiment execution with reproducible run metadata and repeated-run support.
 

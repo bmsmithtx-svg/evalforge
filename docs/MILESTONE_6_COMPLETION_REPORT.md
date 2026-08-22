@@ -18,12 +18,13 @@ Date: 2026-08-17. Updated 2026-08-18 for the correction pass described below.
 - Milestone 3: Approved.
 - Milestone 4: Approved.
 - Milestone 5: Approved (owner approval recorded 2026-08-17).
-- Milestone 6: Implemented and validated; owner review pending.
-- Milestones 7–15: Not started.
+- Milestone 6: Approved (owner approval recorded 2026-08-22).
+- Milestone 7: Authorized; not yet started as of this governance update.
+- Milestones 8–15: Not started.
 
 ## Owner Approval
 
-Milestone 6 (Dataset and Test-Case Management) was authorized and implemented in this session. It is not yet owner-approved; this report is submitted for owner review. Milestone 7 has not been started.
+Milestone 6 (Dataset and Test-Case Management) was authorized and implemented in a prior session. The owner approved Milestone 6 on 2026-08-22, with the reviewed correction-pass commit `57cbbf994a94342ada4f766e97675fb06404da32` (`fix: close milestone 6 review findings`) as the approved baseline. Milestone 7 (Experiment Execution and Reproducibility Engine) has been authorized separately and had not been started at the time this approval was recorded.
 
 ## Correction Pass (2026-08-18)
 
